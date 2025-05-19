@@ -1,4 +1,4 @@
-# EnrichMap – Spatially-aware gene set enrichment
+# EnrichMap: Spatially-aware gene set enrichment
 
 <p align="center">
   <img src="img/enrichmap_logo.jpg" alt="EnrichMap" width="400" />
@@ -81,7 +81,7 @@ This project is licensed under the GNU GENERAL PUBLIC LICENSE.
 
 ## Citation
 
-Celik C & Secrier M (2025). EnrichMap: Spatially-aware gene set enrichment for spatial transcriptomics data. [biorxiv.com]()
+Celik C & Secrier M (2025). EnrichMap: Spatially-informed enrichment analysis for functional interpretation of spatial transcriptomics. [biorxiv.com]()
 
 ### Copyright
 
