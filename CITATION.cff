@@ -1,0 +1,11 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Celik"
+  given-names: "Cenk"
+- family-names: "Secrier"
+  given-names: "Maria"
+title: "EnrichMap: A tool for visualising and interpreting gene set enrichment results"
+version: 1.0.0
+date-released: 2023-08-07
+url: "https://github.com/secrierlab/enrichmap"
