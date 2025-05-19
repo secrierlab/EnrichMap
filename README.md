@@ -1,6 +1,11 @@
 # EnrichMap
 
-`EnrichMap` is a lightweight tool designed to compute and visualise enrichment scores of a given gene set or signature in spatial transcriptomics datasets across different platforms. It offers flexible scoring, batch correction, spatial smoothing and visual outputs for intuitive exploration of biological signatures.
+<div style="display: flex; align-items: center;">
+  <img src="img/enrichmap_logo.jpg" valign="middle" alt="EnrichMap" style="width: 200px; height: auto; margin-right: 15px;">
+  <p>
+    <code>EnrichMap</code> is a lightweight tool designed to compute and visualise enrichment scores of a given gene set or signature in spatial transcriptomics datasets across different platforms. It offers flexible scoring, batch correction, spatial smoothing and visual outputs for intuitive exploration of biological signatures.
+  </p>
+</div>
 
 ## Features
 
