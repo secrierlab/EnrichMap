@@ -1,8 +1,8 @@
 # EnrichMap – Spatially-aware gene set enrichment
 
-<div style="text-align: center;">
+<p align="center">
   <img src="img/enrichmap_logo.jpg" alt="EnrichMap" width="200" />
-</div>
+</p>
 
 `EnrichMap` is a lightweight tool designed to compute and visualise enrichment scores of a given gene set or signature in spatial transcriptomics datasets across different platforms. It offers flexible scoring, batch correction, spatial smoothing and visual outputs for intuitive exploration of biological signatures.
 
