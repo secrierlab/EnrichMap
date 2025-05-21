@@ -66,6 +66,15 @@ em.pl.spatial_enrichmap(
 )
 ```
 
+> Important note: EnrichMap currently does not support reading in `SpatialData` format. However, users can simply convert `SpatialData`  to legacy `AnnData` to use EnrichMap.
+```python
+import spatialdata_io as sd
+# read in SpatialData
+sdata = sd.visium_hd("PATH_TO_DATA_FOLDER/")
+# convert to AnnData
+adata = to_legacy_anndata(sdata, include_images=True, table_name="square_008um", coordinate_system="downscaled_hires")
+```
+
 ## Documentation
 
 Comprehensive documentation is available at:
