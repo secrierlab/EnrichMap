@@ -13,6 +13,7 @@ from libpysal.weights import KNN
 def compute_spatial_metrics(
     adata: AnnData,
     score_key: str = "enrichment_score",
+    n_neighs: int = 6,
 ):
     """
     Compute global and local spatial autocorrelation metrics for a spatial score.
@@ -56,7 +57,7 @@ def compute_spatial_metrics(
     """
     # Ensure spatial neighbors are computed
     if "spatial_neighbors" not in adata.uns:
-        sq.gr.spatial_neighbors(adata, n_neighs=6, coord_type="generic", key_added="spatial")
+        sq.gr.spatial_neighbors(adata, n_neighs=n_neighs, coord_type="generic", key_added="spatial")
     
     # Extract spatial weights
     W = KNN.from_array(adata.obsm["spatial"])

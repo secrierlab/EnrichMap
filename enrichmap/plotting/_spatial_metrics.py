@@ -15,6 +15,7 @@ def spatial_metrics(
     adata: AnnData,
     score_keys: Sequence[str],
     metric: str = "Moran's I",
+    n_neighs: int = 6,
     figsize: tuple[int, int] = (4, 4),
     save=None
 ) -> None:
@@ -54,7 +55,7 @@ def spatial_metrics(
     for method in score_keys:
         if method in adata.obs.columns:
             print(f"Computing {metric} for {method}...")
-            metrics, _, _, _ = compute_spatial_metrics(adata, method)
+            metrics, _, _, _ = compute_spatial_metrics(adata, method, n_neighs=n_neighs)
             results.append((method, metrics[metric]))
 
     # Convert results into a DataFrame
