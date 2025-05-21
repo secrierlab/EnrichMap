@@ -20,7 +20,7 @@ def score(
     gene_weights: dict | None = None,
     score_key: str | list | None = None,
     spatial_key: str | None = "spatial",
-    n_neighbours: int = 6,
+    n_neighbors: int = 6,
     smoothing: bool = True,
     correct_spatial_covariates: bool = True,
     batch_key: str | None = None
@@ -119,7 +119,7 @@ def score(
             for batch in batch_values:
                 mask = adata.obs[batch_key] == batch if batch_key else np.ones(adata.n_obs, dtype=bool)
                 adata_batch = adata[mask].copy()
-                sq.gr.spatial_neighbors(adata_batch, n_neighs=n_neighbours, coord_type="generic", key_added="spatial")
+                sq.gr.spatial_neighbors(adata_batch, n_neighs=n_neighbors, coord_type="generic", key_added="spatial")
                 conn = adata_batch.obsp["spatial_connectivities"]
                 smoothed = conn.dot(z_scores[mask]) / conn.sum(axis=1).A1
                 smoothed_scores[mask] = smoothed
