@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from anndata import AnnData
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+from anndata import AnnData
+from scipy.stats import pearsonr
 from libpysal.weights import KNN
 from libpysal.weights.spatial_lag import lag_spatial
 
@@ -59,19 +59,19 @@ def cross_moran_scatter(
         W = KNN.from_array(coords, k=n_neighbours)
         W.transform = "r"
         y_lag = lag_spatial(W, y)
+
         mask = ~np.isnan(x) & ~np.isnan(y_lag)
         if np.sum(mask) > 1:
-            r = np.corrcoef(x[mask], y_lag[mask])[0, 1]
+            r, p = pearsonr(x[mask], y_lag[mask])
         else:
-            r = np.nan
-
+            r, p = np.nan, np.nan
 
         ax = ax if batch_key is None else axes[i]
         ax.scatter(x, y_lag, s=10, alpha=0.3, color="lightblue")
         sns.regplot(x=x, y=y_lag, scatter=False, ax=ax, color="black", line_kws={"lw": 1})
         ax.axhline(0, color="grey", lw=1)
         ax.axvline(0, color="grey", lw=1)
-        ax.set_title(f"Slide {title}\nr = {r:.2f}", fontsize=10)
+        ax.set_title(f"Slide {title}\nr = {r:.2f}, p = {p:.2g}", fontsize=10)
         ax.set_xlabel(score_x)
         ax.set_ylabel(f"Spatial lag of {score_y}")
         ax.grid(False)
@@ -81,11 +81,9 @@ def cross_moran_scatter(
             axes[j].axis("off")
 
     if save:
-        # Ensure 'figures/' directory exists
         os.makedirs("figures", exist_ok=True)
-
-        # If 'save' has no directory path, prepend 'figures/'
         if not os.path.dirname(save):
             save = os.path.join("figures", save)
         plt.savefig(save, dpi=300, bbox_inches="tight")
+
     plt.show()
