@@ -22,7 +22,7 @@ dependencies = [
     "statannotations",
     "squidpy",
     "pygam",
-    "skgstat-gstat",
+    "scikit-gstat",
     "adjustText",
     "splot"
 ]

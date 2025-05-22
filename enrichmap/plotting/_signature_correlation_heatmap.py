@@ -46,11 +46,32 @@ def get_star_annot(pvals):
 
 def signature_correlation_heatmap(
     adata: AnnData,
-    signatures: list[str],
+    score_keys: list[str],
     batch_key: str | None = None,
     method: str = "spearman",
     save: str | Path | None = None
 ):
+    """
+    Plot a heatmap of correlations between gene set scores in `adata.obs`.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix, where gene signature scores are stored in `adata.obs`.
+    
+    score_keys : list of str
+        List of column names in `adata.obs` corresponding to gene set signature scores.
+    
+    batch_key : str or None, optional (default: None)
+        Key in `adata.obs` specifying batch labels. If provided, separate heatmaps
+        will be plotted for each batch group.
+    
+    method : str, optional (default: "spearman")
+        Correlation method to use. Can be `"spearman"` or `"pearson"`.
+    
+    save : str or Path or None, optional (default: None)
+        Path to save the figure.
+    """
     def plot_heatmap(corr, pvals, title=None, ax=None, cbar=False):
         annot = get_star_annot(pvals)
         hm = sns.heatmap(
@@ -81,7 +102,7 @@ def signature_correlation_heatmap(
     ]
 
     if batch_key is None:
-        df = adata.obs[signatures].dropna()
+        df = adata.obs[score_keys].dropna()
         corr, pvals = compute_corr_and_pval(df, method=method)
 
         fig = plt.figure(figsize=(6.5, 6))
@@ -116,7 +137,7 @@ def signature_correlation_heatmap(
 
         mesh = None
         for i, batch in enumerate(batch_values):
-            df = adata[adata.obs[batch_key] == batch].obs[signatures].dropna()
+            df = adata[adata.obs[batch_key] == batch].obs[score_keys].dropna()
             corr, pvals = compute_corr_and_pval(df, method=method)
             hm = plot_heatmap(corr, pvals, title=f"{batch_key}: {batch}", ax=axes[i], cbar=False)
             if mesh is None:
