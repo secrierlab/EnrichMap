@@ -58,7 +58,10 @@ def spatial_metrics(
 
     plt.axhline(0, linestyle="--", color="gray", linewidth=1)
     plt.title(f"{metric}", fontsize=8)
-    plt.ylabel("Continuity score", fontsize=6)
+    if metric == "Moran's I":
+        plt.ylabel("Spatial coherence", fontsize=6)
+    elif metric == "Geary's C":
+        plt.ylabel("Local dissimilarity", fontsize=6)
     plt.xlabel("Scoring methods", fontsize=6)
     plt.yticks(fontsize=6)
     plt.xticks(rotation=90, fontsize=6)
