@@ -62,6 +62,9 @@ def gene_contributions_pca(
     if "gene_contributions" not in adata.uns:
         raise ValueError("Gene contributions not found in adata.uns.")
 
+    if score_key.endswith("_score"):
+        score_key = score_key[:-6]
+
     contrib_dict = adata.uns["gene_contributions"][score_key]
 
     # Stack into matrix: genes x spatial spots
