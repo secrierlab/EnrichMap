@@ -4,13 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "enrichmap"
-description = "EnrichMap: Spatially and batch aware spatial gene set scoring for spatial transcriptomics data"
+dynamic = ["version"]
+description = "EnrichMap: Spatially informed enrichment analysis for functional interpretation of spatial transcriptomics"
 authors = [
     { name = "C. Celik", email = "cenk.celik@proton.me" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-only" }
+license-files = ["LICEN[CS]E*"]
+
 dependencies = [
     "numpy",
     "scanpy",
@@ -29,8 +32,10 @@ dependencies = [
 
 # https://docs.pypi.org/project_metadata/#project-urls
 [project.urls]
-Documentation = "https://enrichmap.readthedocs.io/"
-Source = "https://github.com/cenk-celik/enrichmap"
+Documentation = "https://enrichmap.readthedocs.io/en/stable"
+Homepage = "https://github.com/secrierlab/enrichmap"
+Issues = "https://github.com/secrierlab/EnrichMap/issues"
+Source = "https://github.com/secrierlab/enrichmap"
 Bluesky = "https://bsky.app/profile/cenkcelik.bsky.social"
 Twitter = "https://x.com/_cenk"
 classifiers = [
