@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "enrichmap"
-dynamic = ["version"]
+version = "0.1.0"
 description = "EnrichMap: Spatially informed enrichment analysis for functional interpretation of spatial transcriptomics"
 authors = [
     { name = "C. Celik", email = "cenk.celik@proton.me" }
@@ -12,7 +12,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-only" }
-license-files = ["LICEN[CS]E*"]
+license-files = ["LICENSE*"]
 
 dependencies = [
     "numpy",
@@ -30,7 +30,6 @@ dependencies = [
     "splot"
 ]
 
-# https://docs.pypi.org/project_metadata/#project-urls
 [project.urls]
 Documentation = "https://enrichmap.readthedocs.io/en/stable"
 Homepage = "https://github.com/secrierlab/enrichmap"
@@ -38,6 +37,7 @@ Issues = "https://github.com/secrierlab/EnrichMap/issues"
 Source = "https://github.com/secrierlab/enrichmap"
 Bluesky = "https://bsky.app/profile/cenkcelik.bsky.social"
 Twitter = "https://x.com/_cenk"
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3.0",
