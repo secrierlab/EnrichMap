@@ -24,7 +24,6 @@ dependencies = [
     "scanpy",
     "matplotlib",
     "seaborn",
-    "dask==2024.11.2",
     "scipy",
     "sklearn",
     "statannotations",
