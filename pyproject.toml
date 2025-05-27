@@ -30,6 +30,12 @@ dependencies = [
     "splot"
 ]
 
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3.0",
+    "Operating System :: OS Independent"
+]
+
 [project.urls]
 Documentation = "https://enrichmap.readthedocs.io/en/stable"
 Homepage = "https://github.com/secrierlab/enrichmap"
@@ -37,12 +43,6 @@ Issues = "https://github.com/secrierlab/EnrichMap/issues"
 Source = "https://github.com/secrierlab/enrichmap"
 Bluesky = "https://bsky.app/profile/cenkcelik.bsky.social"
 Twitter = "https://x.com/_cenk"
-
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3.0",
-    "Operating System :: OS Independent"
-]
 
 [tool.hatch.build.targets.wheel]
 packages = ["enrichmap"]
