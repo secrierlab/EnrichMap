@@ -49,6 +49,7 @@ def signature_correlation_heatmap(
     score_keys: list[str],
     batch_key: str | None = None,
     method: str = "spearman",
+    figsize: tuple[int, int] = (5, 4),
     save: str | Path | None = None
 ):
     """
@@ -72,11 +73,11 @@ def signature_correlation_heatmap(
     save : str or Path or None, optional (default: None)
         Path to save the figure.
     """
-    def plot_heatmap(corr, pvals, title=None, ax=None, cbar=False):
+    def plot_heatmap(corr, pvals, title=None, ax=None, cbar=False, cbar_ax=None):
         annot = get_star_annot(pvals)
         hm = sns.heatmap(
             corr, annot=annot, fmt="", cmap="coolwarm", center=0,
-            vmin=-1, vmax=1, ax=ax, cbar=cbar, annot_kws={"size": 10}
+            vmin=-1, vmax=1, ax=ax, cbar=cbar, cbar_ax=cbar_ax, annot_kws={"size": 10}
         )
         if title:
             ax.set_title(title, fontsize=10)
@@ -105,12 +106,12 @@ def signature_correlation_heatmap(
         df = adata.obs[score_keys].dropna()
         corr, pvals = compute_corr_and_pval(df, method=method)
 
-        fig = plt.figure(figsize=(6.5, 6))
+        fig = plt.figure(figsize=figsize)
         gs = fig.add_gridspec(1, 2, width_ratios=[20, 1])
         ax = fig.add_subplot(gs[0])
         cbar_ax = fig.add_subplot(gs[1])
 
-        plot_heatmap(corr, pvals, title="Correlation of gene set scores", ax=ax, cbar=True)
+        plot_heatmap(corr, pvals, title="Correlation of gene set scores", ax=ax, cbar=True, cbar_ax=cbar_ax)
         fig.legend(handles=handles, loc="lower left", fontsize=8)
 
         if save:
@@ -131,9 +132,8 @@ def signature_correlation_heatmap(
         fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height))
         axes = np.ravel(axes)
 
-        # Reserve space for colorbar to the right
         fig.subplots_adjust(right=0.88)
-        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])
 
         mesh = None
         for i, batch in enumerate(batch_values):
@@ -141,7 +141,7 @@ def signature_correlation_heatmap(
             corr, pvals = compute_corr_and_pval(df, method=method)
             hm = plot_heatmap(corr, pvals, title=f"{batch_key}: {batch}", ax=axes[i], cbar=False)
             if mesh is None:
-                mesh = hm.get_children()[0]  # first QuadMesh for shared colorbar
+                mesh = hm.get_children()[0]
 
         for j in range(i + 1, len(axes)):
             axes[j].axis("off")
