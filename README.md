@@ -34,7 +34,7 @@ pip install enrichmap
 or directly from GitHub:
 
 ```bash
-pip install git+https://github.com/yourusername/enrichmap.git
+pip install git+https://github.com/secrierlab/enrichmap.git
 ```
 
 ## Basic usage
