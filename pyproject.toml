@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "enrichmap"
-version = "0.1.1"
+version = "0.1.0"
 description = "EnrichMap: Spatially informed enrichment analysis for functional interpretation of spatial transcriptomics"
 authors = [
     { name = "C. Celik", email = "cenk.celik@proton.me" }
