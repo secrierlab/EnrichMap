@@ -68,7 +68,7 @@ nb_merge_streams = True
 
 
 ogp_site_url = "https://enrichmap.readthedocs.io/en/stable/"
-ogp_image = "https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.jpg"
+ogp_image = "https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.svg"
 
 typehints_defaults = "braces"
 
