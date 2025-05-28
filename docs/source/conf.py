@@ -91,12 +91,13 @@ html_theme_options = {
     "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
     "use_issues_button": True,
-    "light_logo": "_static/enrichmap_logo_light.svg",
-    "dark_logo": "_static/enrichmap_logo_dark.svg",
+    # "light_logo": "_static/enrichmap_logo_light.svg",
+    # "dark_logo": "_static/enrichmap_logo_dark.svg",
 }
 
 html_show_sphinx = False
 html_title = "EnrichMap"
+html_favicon = "_static/enrichmap_logo_favicon.ico"
 
 
 def setup(app: Sphinx):
@@ -114,7 +115,6 @@ def setup(app: Sphinx):
         },
         True,  # noqa: FBT003
     )
-    app.add_css_file("custom.css")
 
 
 # -- Options for other output formats ------------------------------------------
