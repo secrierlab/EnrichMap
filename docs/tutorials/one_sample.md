@@ -2,4 +2,4 @@
 
 This tutorial shows how to analyse one sample.
 
-```{include} one_sample.ipynb
+```{nb} one_sample.ipynb

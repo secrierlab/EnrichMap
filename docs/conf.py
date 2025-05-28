@@ -36,10 +36,13 @@ extensions = [
     "sphinx_book_theme",
 ]
 
-nb_execution_mode = "off"
+myst_nb_execute = "auto"
+
 myst_enable_extensions = [
-    "dollarmath",
     "amsmath",
+    "dollarmath",
+    "deflist",
+    "html_admonition",
     "html_image",
 ]
 

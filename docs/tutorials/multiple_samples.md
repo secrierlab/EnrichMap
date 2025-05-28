@@ -2,4 +2,4 @@
 
 This tutorial shows how to analyse multiple samples.
 
-```{include} multiple_samples.ipynb
+```{nb} multiple_samples.ipynb
