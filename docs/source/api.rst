@@ -1,13 +1,6 @@
 API Reference
 =============
 
-.. currentmodule:: enrichmap
-
-Tools: ``tl``
-=============
-
-.. module:: enrichmap.tl
-
 Main scoring function
 ---------------------
 
@@ -15,7 +8,7 @@ Main scoring function
    :nosignatures:
    :toctree: generated/
 
-   tl.score
+   enrichmap.tl.score
 
 Helper functions
 ----------------
@@ -26,15 +19,10 @@ These functions are used by the ``score`` function.
    :nosignatures:
    :toctree: generated/
 
-   tl.generate_binary_labels
-   tl.cluster_gene_correlation
-   tl.infer_gene_weights
+   enrichmap.tl.generate_binary_labels
+   enrichmap.tl.cluster_gene_correlation
+   enrichmap.tl.infer_gene_weights
 
-
-Plotting: ``pl``
-================
-
-.. module:: enrichmap.pl
 
 Main plotting function
 ----------------------
@@ -43,7 +31,7 @@ Main plotting function
    :nosignatures:
    :toctree: generated/
 
-   pl.spatial_enrichmap
+   enrichmap.pl.spatial_enrichmap
 
 Geostatistical evaluations
 --------------------------
@@ -54,11 +42,11 @@ Functionalities to assess the smoothness of scores or input gene signature.
    :nosignatures:
    :toctree: generated/
 
-   pl.spatial_metrics
-   pl.variogram
-   pl.variogram_all
-   pl.morans_correlogram
-   pl.cross_moran_scatter
+   enrichmap.pl.spatial_metrics
+   enrichmap.pl.variogram
+   enrichmap.pl.variogram_all
+   enrichmap.pl.morans_correlogram
+   enrichmap.pl.cross_moran_scatter
 
 Signature associations
 ----------------------
@@ -67,7 +55,7 @@ Signature associations
    :nosignatures:
    :toctree: generated/
 
-   pl.signature_correlation_heatmap
+   enrichmap.pl.signature_correlation_heatmap
 
 Gene-level visualisations
 -------------------------
@@ -76,5 +64,5 @@ Gene-level visualisations
    :nosignatures:
    :toctree: generated/
 
-   pl.gene_contributions_heatmap
-   pl.gene_contributions_pca
+   enrichmap.pl.gene_contributions_heatmap
+   enrichmap.pl.gene_contributions_pca
