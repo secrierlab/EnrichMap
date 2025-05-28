@@ -40,7 +40,7 @@ intersphinx_mapping = {
 }
 intersphinx_disabled_domains = ["std"]
 
-templates_path = ["_templates"]
+templates_path = ["_templates"]  # Keep if you have custom templates, else remove
 
 # -- Options for EPUB output
 
@@ -49,50 +49,27 @@ epub_show_urls = "footnote"
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = False
-napoleon_use_rtype = True  # having a separate entry generally helps readability
-napoleon_use_param = True
-napoleon_custom_sections = [("Params", "Parameters")]
-todo_include_todos = False
-api_dir = HERE / "api"
-myst_enable_extensions = [
-    "amsmath",
-    "colon_fence",
-    "deflist",
-    "dollarmath",
-    "html_image",
-    "html_admonition",
-]
-myst_url_schemes = ("http", "https", "mailto", "ftp")
-myst_heading_anchors = 3
-nb_output_stderr = "remove"
-nb_execution_mode = "off"
-nb_merge_streams = True
 
-
-ogp_site_url = "https://enrichmap.readthedocs.io/en/stable/"
-ogp_image = "https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.svg"
-
-typehints_defaults = "braces"
-
-pygments_style = "default"
-pygments_dark_style = "native"
-
+# Enable NumPy-style docstrings (optional)
+# If you use napoleon, add 'sphinx.ext.napoleon' to extensions and uncomment these
+# napoleon_google_docstring = False
+# napoleon_numpy_docstring = True
+# napoleon_include_init_with_doc = False
+# napoleon_use_rtype = True
+# napoleon_use_param = True
+# napoleon_custom_sections = [("Params", "Parameters")]
 
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
-html_logo = "_static/enrichmap_logo_light.svg"
-# The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
+
+# Use light and dark logos for sphinx-book-theme
 html_theme_options = {
     "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
     "use_issues_button": True,
-    # "light_logo": "_static/enrichmap_logo_light.svg",
-    # "dark_logo": "_static/enrichmap_logo_dark.svg",
+    "light_logo": "_static/enrichmap_logo_light.svg",
+    "dark_logo": "_static/enrichmap_logo_dark.svg",
 }
 
 html_show_sphinx = False
@@ -104,17 +81,6 @@ def setup(app: Sphinx):
     """App setup hook."""
     app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
     app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
-    app.add_config_value(
-        "recommonmark_config",
-        {
-            "auto_toc_tree_section": "Contents",
-            "enable_auto_toc_tree": True,
-            "enable_math": True,
-            "enable_inline_math": False,
-            "enable_eval_rst": True,
-        },
-        True,  # noqa: FBT003
-    )
 
 
 # -- Options for other output formats ------------------------------------------
