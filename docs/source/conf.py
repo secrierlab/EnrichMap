@@ -62,6 +62,7 @@ autodoc_member_order = "bysource"
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 # Use light and dark logos for sphinx-book-theme
 html_theme_options = {
