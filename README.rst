@@ -1,4 +1,4 @@
-Basic usage
+Basic tutorial
 ==============================================
 
 Installation
@@ -23,7 +23,7 @@ Or directly from GitHub:
 
    pip install git+https://github.com/secrierlab/enrichmap.git
 
-Basic usage
+Usage
 -----------
 
 .. code-block:: python
