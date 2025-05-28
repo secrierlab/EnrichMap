@@ -76,7 +76,7 @@ def signature_correlation_heatmap(
     def plot_heatmap(corr, pvals, title=None, ax=None, cbar=False, cbar_ax=None):
         annot = get_star_annot(pvals)
         hm = sns.heatmap(
-            corr, annot=annot, fmt="", cmap="coolwarm", center=0,
+            corr, annot=annot, fmt="", cmap="seismic", center=0,
             vmin=-1, vmax=1, ax=ax, cbar=cbar, cbar_ax=cbar_ax, annot_kws={"size": 10}
         )
         if title:
