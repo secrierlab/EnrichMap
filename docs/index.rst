@@ -25,5 +25,5 @@ Contents
    
    install
    usage
-   api
    tutorials/index
+   api
