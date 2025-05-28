@@ -91,7 +91,8 @@ html_theme_options = {
     "use_issues_button": True,
 }
 html_show_sphinx = False
-html_logo = "https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.svg"
+html_static_path = ["_static"]
+html_logo = "_static/enrichmap_logo.svg"
 html_title = "EnrichMap"
 
 
