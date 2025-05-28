@@ -29,8 +29,4 @@ Contents
    
    usage
    api
-   tutorials
-
-.. grid-item-card:: Tutorials :octicon:`play;1em;`
-   :link: tutorials/index
-   :link-type: doc
+   tutorials/index
