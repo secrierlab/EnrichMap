@@ -31,8 +31,15 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    "nbsphinx",
+    "myst_nb",
     "sphinx_book_theme",
+]
+
+nb_execution_mode = "off"
+myst_enable_extensions = [
+    "dollarmath",
+    "amsmath",
+    "html_image",
 ]
 
 intersphinx_mapping = {

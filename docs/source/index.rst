@@ -1,5 +1,5 @@
 Welcome to EnrichMap's documentation!
-===================================
+=====================================
 .. image:: https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.jpg
    :alt: EnrichMap
    :align: center

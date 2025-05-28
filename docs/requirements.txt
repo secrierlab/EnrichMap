@@ -1,6 +1,4 @@
 sphinx==7.1.2
 sphinx-book-theme
-nbsphinx
 ipykernel
-nbformat
-nbconvert
+myst-nb
