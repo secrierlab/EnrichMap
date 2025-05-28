@@ -31,6 +31,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx_book_theme",
 ]
 
 intersphinx_mapping = {
@@ -43,7 +44,7 @@ templates_path = ["_templates"]
 
 # -- Options for HTML output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
 
 # -- Options for EPUB output
 
@@ -93,6 +94,7 @@ html_theme = "sphinx_rtd_theme"
 html_theme_options = {
     "repository_url": repository_url,
     "use_repository_button": True,
+    "use_issues_button": True,
 }
 html_static_path = ["_static"]
 html_show_sphinx = False
