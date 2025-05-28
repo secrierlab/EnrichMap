@@ -51,7 +51,7 @@ napoleon_use_rtype = True  # having a separate entry generally helps readability
 napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
-api_dir = HERE / "api"  # function_images
+api_dir = HERE / "api"
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",

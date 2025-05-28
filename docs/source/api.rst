@@ -1,11 +1,14 @@
-API
-===
-
-.. module:: enrichmap.tools
+API Reference
+=============
 
 .. currentmodule:: enrichmap
 
 .. autosummary::
+   :toctree: generated
+   :template: module.rst
    :nosignatures:
-   :toctree: ../generated/
 
+   enrichmap
+   enrichmap.tools
+   enrichmap.plotting
+   enrichmap.utils
