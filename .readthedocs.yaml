@@ -9,7 +9,7 @@ python:
   install:
     - method: pip
       path: .
-  system_packages: false
+    - requirements: docs/requirements.txt
 
 sphinx:
   configuration: docs/source/conf.py
