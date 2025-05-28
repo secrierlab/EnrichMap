@@ -60,15 +60,6 @@ epub_show_urls = "footnote"
 autosummary_generate = True
 autodoc_member_order = "bysource"
 
-# Enable NumPy-style docstrings (optional)
-# If you use napoleon, add 'sphinx.ext.napoleon' to extensions and uncomment these
-# napoleon_google_docstring = False
-# napoleon_numpy_docstring = True
-# napoleon_include_init_with_doc = False
-# napoleon_use_rtype = True
-# napoleon_use_param = True
-# napoleon_custom_sections = [("Params", "Parameters")]
-
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
@@ -84,7 +75,7 @@ html_theme_options = {
 
 html_show_sphinx = False
 html_title = "EnrichMap"
-html_favicon = "_static/enrichmap_logo_favicon.ico"
+html_favicon = "_static/favicon.png"
 
 
 def setup(app: Sphinx):
