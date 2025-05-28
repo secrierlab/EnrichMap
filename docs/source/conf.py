@@ -2,12 +2,12 @@
 
 # -- Project information
 
-project = 'Lumache'
-copyright = '2021, Graziella'
-author = 'Graziella'
+project = 'EnrichMap'
+copyright = 'Cenk Celik'
+author = 'Cenk Celik'
 
 release = '0.1'
-version = '0.1.0'
+version = '0.1.5'
 
 # -- General configuration
 
@@ -32,4 +32,5 @@ templates_path = ['_templates']
 html_theme = 'sphinx_rtd_theme'
 
 # -- Options for EPUB output
+
 epub_show_urls = 'footnote'
