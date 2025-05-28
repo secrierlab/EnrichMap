@@ -29,3 +29,4 @@ Contents
    
    usage
    api
+   tutorials
