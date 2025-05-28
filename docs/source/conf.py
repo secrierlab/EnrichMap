@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 from pathlib import Path
+from functools import partial
+from docutils import nodes
+from typing import TYPE_CHECKING
 
 HERE = Path(__file__).parent
+
 import enrichmap
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 # -- Project information
 project = 'EnrichMap'
@@ -13,6 +19,8 @@ author = 'Cenk Celik'
 
 release = '0.1'
 version = '0.1.5'
+
+master_doc = "index"
 
 # -- General configuration
 
@@ -74,3 +82,54 @@ typehints_defaults = "braces"
 
 pygments_style = "default"
 pygments_dark_style = "native"
+
+
+# -- Options for HTML output ----------------------------------------------
+
+# The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
+repository_url = "https://github.com/secrierlab/enrichmap"
+html_theme = "scanpydoc"
+html_theme_options = {
+    "repository_url": repository_url,
+    "use_repository_button": True,
+}
+html_static_path = ["_static"]
+html_show_sphinx = False
+html_logo = "https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.svg"
+html_title = "scanpy"
+
+
+def setup(app: Sphinx):
+    """App setup hook."""
+    app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
+    app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
+    app.add_config_value(
+        "recommonmark_config",
+        {
+            "auto_toc_tree_section": "Contents",
+            "enable_auto_toc_tree": True,
+            "enable_math": True,
+            "enable_inline_math": False,
+            "enable_eval_rst": True,
+        },
+        True,  # noqa: FBT003
+    )
+
+
+# -- Options for other output formats ------------------------------------------
+
+htmlhelp_basename = f"{project}doc"
+doc_title = f"{project} Documentation"
+latex_documents = [(master_doc, f"{project}.tex", doc_title, author, "manual")]
+man_pages = [(master_doc, project, doc_title, [author], 1)]
+texinfo_documents = [
+    (
+        master_doc,
+        project,
+        doc_title,
+        author,
+        project,
+        "One line description of project.",
+        "Miscellaneous",
+    )
+]
