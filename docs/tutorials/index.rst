@@ -4,4 +4,3 @@
    
    one_sample
    multiple_samples
-   evaluate_smoothness
