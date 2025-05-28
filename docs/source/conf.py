@@ -114,6 +114,7 @@ def setup(app: Sphinx):
         },
         True,  # noqa: FBT003
     )
+    app.add_css_file("custom.css")
 
 
 # -- Options for other output formats ------------------------------------------

@@ -1,0 +1,7 @@
+html[data-theme="dark"] .logo img {
+    content: url("_static/enrichmap_logo_light.svg");
+}
+
+html[data-theme="light"] .logo img {
+    content: url("_static/enrichmap_logo_dark.svg");
+}
