@@ -1,7 +1,11 @@
 API
 ===
 
-.. autosummary::
-   :toctree: generated
+.. module:: enrichmap.tools
 
-   enrichmap
+.. currentmodule:: enrichmap
+
+.. autosummary::
+   :nosignatures:
+   :toctree: ../generated/
+
