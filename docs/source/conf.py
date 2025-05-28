@@ -84,15 +84,18 @@ pygments_dark_style = "native"
 
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
+html_static_path = ["_static"]
+html_logo = "_static/enrichmap_logo_light.svg"
 # The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
 html_theme_options = {
     "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
     "use_issues_button": True,
+    "light_logo": "_static/enrichmap_logo_light.svg",
+    "dark_logo": "_static/enrichmap_logo_dark.svg",
 }
+
 html_show_sphinx = False
-html_static_path = ["_static"]
-html_logo = "_static/enrichmap_logo.svg"
 html_title = "EnrichMap"
 
 
