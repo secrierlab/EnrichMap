@@ -5,5 +5,5 @@ Tutorials
    :maxdepth: 1
    :caption: Tutorials
    
-   one_sample.ipynb
-   multiple_samples.ipynb
+   one_sample
+   multiple_samples
