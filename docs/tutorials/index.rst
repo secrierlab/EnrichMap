@@ -5,5 +5,5 @@ Tutorials
    :maxdepth: 1
    :caption: Tutorials
    
-   tutorials/one_sample
-   tutorials/multiple_samples
+   one_sample
+   multiple_samples
