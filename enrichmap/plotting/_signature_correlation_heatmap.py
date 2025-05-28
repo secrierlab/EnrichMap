@@ -12,6 +12,7 @@ from scipy.stats import spearmanr, pearsonr
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
+
 def compute_corr_and_pval(df, method="spearman"):
     n = df.shape[1]
     corr = np.zeros((n, n))
@@ -26,7 +27,10 @@ def compute_corr_and_pval(df, method="spearman"):
                 raise ValueError("Unsupported method: choose 'spearman' or 'pearson'")
             corr[i, j] = r
             pvals[i, j] = p
-    return pd.DataFrame(corr, index=df.columns, columns=df.columns), pd.DataFrame(pvals, index=df.columns, columns=df.columns)
+    return pd.DataFrame(corr, index=df.columns, columns=df.columns), pd.DataFrame(
+        pvals, index=df.columns, columns=df.columns
+    )
+
 
 def get_star_annot(pvals):
     annot = pvals.copy()
@@ -44,13 +48,14 @@ def get_star_annot(pvals):
                 annot.iloc[i, j] = ""
     return annot
 
+
 def signature_correlation_heatmap(
     adata: AnnData,
     score_keys: list[str],
     batch_key: str | None = None,
     method: str = "spearman",
     figsize: tuple[int, int] = (5, 4),
-    save: str | Path | None = None
+    save: str | Path | None = None,
 ):
     """
     Plot a heatmap of correlations between gene set scores in `adata.obs`.
@@ -59,25 +64,35 @@ def signature_correlation_heatmap(
     ----------
     adata : AnnData
         Annotated data matrix, where gene signature scores are stored in `adata.obs`.
-    
+
     score_keys : list of str
         List of column names in `adata.obs` corresponding to gene set signature scores.
-    
+
     batch_key : str or None, optional (default: None)
         Key in `adata.obs` specifying batch labels. If provided, separate heatmaps
         will be plotted for each batch group.
-    
+
     method : str, optional (default: "spearman")
         Correlation method to use. Can be `"spearman"` or `"pearson"`.
-    
+
     save : str or Path or None, optional (default: None)
         Path to save the figure.
     """
+
     def plot_heatmap(corr, pvals, title=None, ax=None, cbar=False, cbar_ax=None):
         annot = get_star_annot(pvals)
         hm = sns.heatmap(
-            corr, annot=annot, fmt="", cmap="seismic", center=0,
-            vmin=-1, vmax=1, ax=ax, cbar=cbar, cbar_ax=cbar_ax, annot_kws={"size": 10}
+            corr,
+            annot=annot,
+            fmt="",
+            cmap="seismic",
+            center=0,
+            vmin=-1,
+            vmax=1,
+            ax=ax,
+            cbar=cbar,
+            cbar_ax=cbar_ax,
+            annot_kws={"size": 10},
         )
         if title:
             ax.set_title(title, fontsize=10)
@@ -90,14 +105,19 @@ def signature_correlation_heatmap(
         "***": "p < 0.001",
         "**": "p < 0.01",
         "*": "p < 0.05",
-        "n.s.": "n.s."
+        "n.s.": "n.s.",
     }
 
     handles = [
         plt.Line2D(
-            [], [], linestyle="None", marker="", markersize=10,
-            markerfacecolor="black", markeredgewidth=0,
-            label=f"{star} ({label})"
+            [],
+            [],
+            linestyle="None",
+            marker="",
+            markersize=10,
+            markerfacecolor="black",
+            markeredgewidth=0,
+            label=f"{star} ({label})",
         )
         for star, label in star_legend.items()
     ]
@@ -111,7 +131,14 @@ def signature_correlation_heatmap(
         ax = fig.add_subplot(gs[0])
         cbar_ax = fig.add_subplot(gs[1])
 
-        plot_heatmap(corr, pvals, title="Correlation of gene set scores", ax=ax, cbar=True, cbar_ax=cbar_ax)
+        plot_heatmap(
+            corr,
+            pvals,
+            title="Correlation of gene set scores",
+            ax=ax,
+            cbar=True,
+            cbar_ax=cbar_ax,
+        )
         fig.legend(handles=handles, loc="lower left", fontsize=8)
 
         if save:
@@ -127,8 +154,8 @@ def signature_correlation_heatmap(
         ncols = int(np.ceil(np.sqrt(n)))
         nrows = int(np.ceil(n / ncols))
 
-        fig_width = 6 * ncols + 1.5  # add space for colorbar
-        fig_height = 6 * nrows
+        fig_width = 3 * ncols + 1.5  # add space for colorbar
+        fig_height = 3 * nrows
         fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height))
         axes = np.ravel(axes)
 
@@ -139,7 +166,9 @@ def signature_correlation_heatmap(
         for i, batch in enumerate(batch_values):
             df = adata[adata.obs[batch_key] == batch].obs[score_keys].dropna()
             corr, pvals = compute_corr_and_pval(df, method=method)
-            hm = plot_heatmap(corr, pvals, title=f"{batch_key}: {batch}", ax=axes[i], cbar=False)
+            hm = plot_heatmap(
+                corr, pvals, title=f"{batch_key}: {batch}", ax=axes[i], cbar=False
+            )
             if mesh is None:
                 mesh = hm.get_children()[0]
 
