@@ -69,6 +69,8 @@ html_theme_options = {
     "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
     "use_issues_button": True,
+    "light_logo": "_static/enrichmap_logo_light.svg",
+    "dark_logo": "_static/enrichmap_logo_dark.svg",
 }
 
 html_show_sphinx = False
