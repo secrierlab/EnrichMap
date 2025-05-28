@@ -1,4 +1,9 @@
-# Configuration file for the Sphinx documentation builder.
+"""Configuration for EnrichMap's Sphinx documentation."""
+
+from __future__ import annotations
+from pathlib import Path
+
+HERE = Path(__file__).parent
 
 # -- Project information
 
