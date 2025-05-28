@@ -72,15 +72,14 @@ autodoc_member_order = "bysource"
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
-html_logo = "_static/logo-light.png"
+html_logo = "_static/logo-light.svg"
 
 # Use light and dark logos for sphinx-book-theme
 html_theme_options = {
     "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
     "use_issues_button": True,
-    "light_logo": "_static/logo-light.png",
-    "dark_logo": "_static/logo-dark.png",
+    "logo": {"image_dark": "_static/logo-dark.svg"},
 }
 
 html_show_sphinx = False
