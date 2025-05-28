@@ -31,6 +31,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
     "myst_nb",
     "sphinx_book_theme",
 ]
@@ -47,8 +48,6 @@ intersphinx_mapping = {
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
 }
 intersphinx_disabled_domains = ["std"]
-
-templates_path = ["_templates"]  # Keep if you have custom templates, else remove
 
 # -- Options for EPUB output
 
@@ -82,7 +81,7 @@ html_theme_options = {
 
 html_show_sphinx = False
 html_title = "EnrichMap"
-html_favicon = "enrichmap_logo_favicon.ico"
+html_favicon = "_static/enrichmap_logo_favicon.ico"
 
 
 def setup(app: Sphinx):
