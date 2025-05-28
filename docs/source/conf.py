@@ -42,10 +42,6 @@ intersphinx_disabled_domains = ["std"]
 
 templates_path = ["_templates"]
 
-# -- Options for HTML output
-
-html_theme = "sphinx_book_theme"
-
 # -- Options for EPUB output
 
 epub_show_urls = "footnote"
@@ -87,16 +83,13 @@ pygments_dark_style = "native"
 
 
 # -- Options for HTML output ----------------------------------------------
-
+html_theme = "sphinx_book_theme"
 # The theme is sphinx-book-theme, with patches for readthedocs-sphinx-search
-repository_url = "https://github.com/secrierlab/enrichmap"
-html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    "repository_url": repository_url,
+    "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
     "use_issues_button": True,
 }
-html_static_path = ["_static"]
 html_show_sphinx = False
 html_logo = "https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_logo.svg"
 html_title = "EnrichMap"
