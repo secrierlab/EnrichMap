@@ -89,7 +89,7 @@ This project is licensed under the GNU GENERAL PUBLIC LICENSE.
 Citation
 --------
 
-Celik C & Secrier M (2025). *EnrichMap: Spatially-informed enrichment analysis for functional interpretation of spatial transcriptomics*. [biorxiv.com](https://www.biorxiv.org/content/10.1101/2025.05.30.656960v1)
+Celik C & Secrier M (2025). *EnrichMap: Spatially-informed enrichment analysis for functional interpretation of spatial transcriptomics*. `biorxiv.com <https://www.biorxiv.org/content/10.1101/2025.05.30.656960v1>`_
 
 Copyright
 ---------
