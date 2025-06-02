@@ -5,7 +5,7 @@ authors:
   given-names: "Cenk"
 - family-names: "Secrier"
   given-names: "Maria"
-title: "EnrichMap: A tool for visualising and interpreting gene set enrichment results"
-version: 1.0.0
-date-released: 2023-08-07
+title: "EnrichMap: Spatially-informed enrichment analysis for functional interpretation of spatial transcriptomics"
+version: 1.6.0
+date-released: 2025-05-30
 url: "https://github.com/secrierlab/enrichmap"
