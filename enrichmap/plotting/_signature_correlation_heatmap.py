@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-from matplotlib import pyplot as plt
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.gridspec as gridspec
+
+from scipy.spatial.distance import squareform
+from scipy.cluster.hierarchy import linkage, leaves_list
+from matplotlib import pyplot as plt
 from anndata import AnnData
 from scipy.stats import spearmanr, pearsonr
 from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.gridspec as gridspec
-import os
 
 
 def compute_corr_and_pval(df, method="spearman"):
@@ -58,6 +61,7 @@ def signature_correlation_heatmap(
     figsize: tuple[int, int] = (5, 5),
     cmap: str | None = "coolwarm",
     save: str | Path | None = None,
+    **kwargs: dict[str, any],
 ):
     """
     Plot a heatmap of correlations between gene set scores in `adata.obs`.
@@ -87,6 +91,9 @@ def signature_correlation_heatmap(
 
     save : str or Path or None
         Path to save the figure.
+
+    **kwargs : dict
+        Additional keyword arguments passed to `sns.heatmap`.
     """
     # optional library filtering
     if library_key and library_id is not None:
@@ -101,10 +108,21 @@ def signature_correlation_heatmap(
     def plot_single_heatmap(corr, pvals, title, fig, position):
         annot = get_star_annot(pvals)
 
-        # Create main axis
-        ax = fig.add_subplot(position)
+        # Compute distance matrix for clustering (1 - abs(corr))
+        dist = 1 - corr
+        condensed_dist = squareform(dist, checks=False)  # convert to 1D condensed form
 
-        # Use make_axes_locatable to allocate space for the colour bar
+        # Compute linkage and order
+        linkage_matrix = linkage(condensed_dist, method="average")
+        order = leaves_list(linkage_matrix)
+
+        # Reorder rows and columns
+        corr = corr.iloc[order, order]
+        pvals = pvals.iloc[order, order]
+        annot = annot.iloc[order, order]
+
+        # Create main axis and colorbar axis
+        ax = fig.add_subplot(position)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.1)
 
@@ -113,14 +131,14 @@ def signature_correlation_heatmap(
             annot=annot,
             fmt="",
             cmap=cmap,
-            center=0,
-            vmin=-1,
-            vmax=1,
             square=True,
             ax=ax,
+            vmax=1,
+            vmin=-1,
             cbar=True,
             cbar_ax=cax,
             annot_kws={"size": 8},
+            **kwargs,
         )
 
         ax.set_title(title, fontsize=10, pad=8)
@@ -135,7 +153,6 @@ def signature_correlation_heatmap(
         ax.set_xticklabels(xticks, fontsize=6, rotation=90, ha="right")
         ax.set_yticklabels(yticks, fontsize=6)
         ax.grid(False)
-
         cax.tick_params(labelsize=6)
 
     # single panel
