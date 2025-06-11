@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import os
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-
-from pathlib import Path
 from anndata import AnnData
 from scipy.stats import spearmanr, pearsonr
-
-plt.rcParams["pdf.fonttype"] = "truetype"
+from pathlib import Path
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.gridspec as gridspec
+import os
 
 
 def compute_corr_and_pval(df, method="spearman"):
@@ -27,8 +26,9 @@ def compute_corr_and_pval(df, method="spearman"):
                 raise ValueError("Unsupported method: choose 'spearman' or 'pearson'")
             corr[i, j] = r
             pvals[i, j] = p
-    return pd.DataFrame(corr, index=df.columns, columns=df.columns), pd.DataFrame(
-        pvals, index=df.columns, columns=df.columns
+    return (
+        pd.DataFrame(corr, index=df.columns, columns=df.columns),
+        pd.DataFrame(pvals, index=df.columns, columns=df.columns),
     )
 
 
@@ -37,6 +37,8 @@ def get_star_annot(pvals):
     annot[:] = ""
     for i in range(pvals.shape[0]):
         for j in range(pvals.shape[1]):
+            if i == j:
+                continue
             p = pvals.iloc[i, j]
             if p < 0.001:
                 annot.iloc[i, j] = "***"
@@ -44,17 +46,17 @@ def get_star_annot(pvals):
                 annot.iloc[i, j] = "**"
             elif p < 0.05:
                 annot.iloc[i, j] = "*"
-            else:
-                annot.iloc[i, j] = ""
     return annot
 
 
 def signature_correlation_heatmap(
     adata: AnnData,
     score_keys: list[str],
-    batch_key: str | None = None,
+    library_key: str | None = None,
+    library_id: str | list[str] | None = None,
     method: str = "spearman",
-    figsize: tuple[int, int] = (5, 4),
+    figsize: tuple[int, int] = (5, 5),
+    cmap: str | None = "coolwarm",
     save: str | Path | None = None,
 ):
     """
@@ -63,126 +65,118 @@ def signature_correlation_heatmap(
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, where gene signature scores are stored in `adata.obs`.
+        Annotated data matrix with gene signature scores in `adata.obs`.
 
     score_keys : list of str
-        List of column names in `adata.obs` corresponding to gene set signature scores.
+        Column names in `adata.obs` corresponding to gene set signature scores.
 
-    batch_key : str or None, optional (default: None)
-        Key in `adata.obs` specifying batch labels. If provided, separate heatmaps
-        will be plotted for each batch group.
+    library_key : str or None
+        Key in `adata.obs` for library identifiers (e.g. patient ID).
 
-    method : str, optional (default: "spearman")
-        Correlation method to use. Can be `"spearman"` or `"pearson"`.
+    library_id : str or None
+        If set, filter `adata` for this library before plotting.
 
-    save : str or Path or None, optional (default: None)
+    method : str
+        Correlation method: "spearman" or "pearson".
+
+    figsize : tuple of int
+        Size of the figure (width, height).
+
+    cmap : str or None
+        Colormap for the heatmap. Defaults to "coolwarm".
+
+    save : str or Path or None
         Path to save the figure.
     """
+    # optional library filtering
+    if library_key and library_id is not None:
+        mask = (
+            adata.obs[library_key] == library_id
+            if isinstance(library_id, str)
+            else adata.obs[library_key].isin(library_id)
+        )
+        adata = adata[mask]
 
-    def plot_heatmap(corr, pvals, title=None, ax=None, cbar=False, cbar_ax=None):
+    # internal helper
+    def plot_single_heatmap(corr, pvals, title, fig, position):
         annot = get_star_annot(pvals)
-        hm = sns.heatmap(
+
+        # Create main axis
+        ax = fig.add_subplot(position)
+
+        # Use make_axes_locatable to allocate space for the colour bar
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+
+        sns.heatmap(
             corr,
             annot=annot,
             fmt="",
-            cmap="seismic",
+            cmap=cmap,
             center=0,
             vmin=-1,
             vmax=1,
+            square=True,
             ax=ax,
-            cbar=cbar,
-            cbar_ax=cbar_ax,
-            annot_kws={"size": 10},
+            cbar=True,
+            cbar_ax=cax,
+            annot_kws={"size": 8},
         )
-        if title:
-            ax.set_title(title, fontsize=10)
-        ax.set_xticklabels(ax.get_xticklabels(), fontsize=8, rotation=45, ha="right")
-        ax.set_yticklabels(ax.get_yticklabels(), fontsize=8)
+
+        ax.set_title(title, fontsize=10, pad=8)
+
+        xticks = [
+            label.get_text().replace("_score", "") for label in ax.get_xticklabels()
+        ]
+        yticks = [
+            label.get_text().replace("_score", "") for label in ax.get_yticklabels()
+        ]
+
+        ax.set_xticklabels(xticks, fontsize=6, rotation=90, ha="right")
+        ax.set_yticklabels(yticks, fontsize=6)
         ax.grid(False)
-        return hm
 
-    star_legend = {
-        "***": "p < 0.001",
-        "**": "p < 0.01",
-        "*": "p < 0.05",
-        "n.s.": "n.s.",
-    }
+        cax.tick_params(labelsize=6)
 
-    handles = [
-        plt.Line2D(
-            [],
-            [],
-            linestyle="None",
-            marker="",
-            markersize=10,
-            markerfacecolor="black",
-            markeredgewidth=0,
-            label=f"{star} ({label})",
-        )
-        for star, label in star_legend.items()
-    ]
-
-    if batch_key is None:
+    # single panel
+    if library_key is None:
         df = adata.obs[score_keys].dropna()
         corr, pvals = compute_corr_and_pval(df, method=method)
 
-        fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(1, 2, width_ratios=[20, 1])
-        ax = fig.add_subplot(gs[0])
-        cbar_ax = fig.add_subplot(gs[1])
+        fig = plt.figure(figsize=figsize, constrained_layout=True)
+        gs = gridspec.GridSpec(1, 1, figure=fig)
+        plot_single_heatmap(corr, pvals, "Correlation heatmap", fig, gs[0])
 
-        plot_heatmap(
-            corr,
-            pvals,
-            title="Correlation of gene set scores",
-            ax=ax,
-            cbar=True,
-            cbar_ax=cbar_ax,
-        )
-        fig.legend(handles=handles, loc="lower left", fontsize=8)
-
-        if save:
-            os.makedirs("figures", exist_ok=True)
-            if not os.path.dirname(save):
-                save = os.path.join("figures", save)
-            plt.savefig(save, dpi=300, bbox_inches="tight")
-        plt.show()
-
+    # multi-panel by batch
     else:
-        batch_values = adata.obs[batch_key].unique()
-        n = len(batch_values)
-        ncols = int(np.ceil(np.sqrt(n)))
-        nrows = int(np.ceil(n / ncols))
+        batches = sorted(adata.obs[library_key].dropna().unique())
+        n_batches = len(batches)
+        ncols = int(np.ceil(np.sqrt(n_batches)))
+        nrows = int(np.ceil(n_batches / ncols))
 
-        fig_width = 3 * ncols + 1.5  # add space for colorbar
-        fig_height = 3 * nrows
-        fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height))
-        axes = np.ravel(axes)
+        fig = plt.figure(
+            figsize=(figsize[0] * ncols, figsize[1] * nrows), constrained_layout=True
+        )
+        gs_outer = gridspec.GridSpec(nrows, ncols, figure=fig, wspace=0.4, hspace=0.4)
 
-        fig.subplots_adjust(right=0.88)
-        cbar_ax = fig.add_axes([0.9, 0.15, 0.02, 0.7])
+        for i, batch in enumerate(batches):
+            row, col = divmod(i, ncols)
+            idx = gs_outer[row, col]
 
-        mesh = None
-        for i, batch in enumerate(batch_values):
-            df = adata[adata.obs[batch_key] == batch].obs[score_keys].dropna()
+            df = adata[adata.obs[library_key] == batch].obs[score_keys].dropna()
             corr, pvals = compute_corr_and_pval(df, method=method)
-            hm = plot_heatmap(
-                corr, pvals, title=f"{batch_key}: {batch}", ax=axes[i], cbar=False
+            plot_single_heatmap(
+                corr, pvals, f"Correlation heatmap for {batch}", fig, idx
             )
-            if mesh is None:
-                mesh = hm.get_children()[0]
 
-        for j in range(i + 1, len(axes)):
-            axes[j].axis("off")
+        # blank unused cells
+        for j in range(i + 1, nrows * ncols):
+            fig.add_subplot(gs_outer[j // ncols, j % ncols]).axis("off")
 
-        if mesh:
-            fig.colorbar(mesh, cax=cbar_ax)
+    # optional save
+    if save:
+        os.makedirs(os.path.dirname(save) or "figures", exist_ok=True)
+        path = os.path.join("figures", save) if not os.path.dirname(save) else save
+        plt.savefig(path, dpi=300, bbox_inches="tight")
 
-        fig.legend(handles=handles, loc="lower left", fontsize=8)
-
-        if save:
-            os.makedirs("figures", exist_ok=True)
-            if not os.path.dirname(save):
-                save = os.path.join("figures", save)
-            plt.savefig(save, dpi=300, bbox_inches="tight")
-        plt.show()
+    plt.show()

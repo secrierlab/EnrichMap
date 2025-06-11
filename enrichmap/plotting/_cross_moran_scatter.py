@@ -11,13 +11,14 @@ from libpysal.weights.spatial_lag import lag_spatial
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
+
 def cross_moran_scatter(
     adata: AnnData,
     score_x: str,
     score_y: str,
     batch_key: str | None = None,
     n_neighbours: int = 6,
-    save: str | None = None
+    save: str | None = None,
 ):
     """
     Plot cross-Moran scatterplots: score_x vs spatial lag of score_y, per sample or globally.
@@ -43,12 +44,17 @@ def cross_moran_scatter(
         batches = [adata]
         titles = ["Cross-Moran scatter plot"]
     else:
-        batches = [adata[adata.obs[batch_key] == b].copy() for b in adata.obs[batch_key].unique()]
+        batches = [
+            adata[adata.obs[batch_key] == b].copy()
+            for b in adata.obs[batch_key].unique()
+        ]
         titles = adata.obs[batch_key].unique().tolist()
         n = len(batches)
         ncols = int(np.ceil(np.sqrt(n)))
         nrows = int(np.ceil(n / ncols))
-        fig, axes = plt.subplots(nrows, ncols, figsize=(3 * ncols, 3 * nrows), constrained_layout=True)
+        fig, axes = plt.subplots(
+            nrows, ncols, figsize=(3 * ncols, 3 * nrows), constrained_layout=True
+        )
         axes = np.ravel(axes)
 
     for i, (ad, title) in enumerate(zip(batches, titles)):
@@ -68,9 +74,11 @@ def cross_moran_scatter(
 
         ax = ax if batch_key is None else axes[i]
         ax.scatter(x, y_lag, s=10, alpha=0.3, color="lightblue")
-        sns.regplot(x=x, y=y_lag, scatter=False, ax=ax, color="black", line_kws={"lw": 1})
-        ax.axhline(0, color="grey", lw=1)
-        ax.axvline(0, color="grey", lw=1)
+        sns.regplot(
+            x=x, y=y_lag, scatter=False, ax=ax, color="black", line_kws={"lw": 1}
+        )
+        ax.axhline(0, color="grey", lw=1, linestyle="--")
+        ax.axvline(0, color="grey", lw=1, linestyle="--")
         ax.set_title(f"Slide {title}\nr = {r:.2f}, p = {p:.2g}", fontsize=10)
         ax.set_xlabel(score_x)
         ax.set_ylabel(f"Spatial lag of {score_y}")

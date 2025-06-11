@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
+
 def spatial_enrichmap(
     adata: AnnData,
     score_key: str | list | None = None,
     cmap: str = "seismic",
-    library_key: str = None,
+    library_key: str = "library_id",
     library_id: str | list | None = None,
     img_alpha: float = 0.5,
     ncols: int | None = None,
@@ -22,50 +23,41 @@ def spatial_enrichmap(
     """
     Visualise spatial enrichment maps for given signatures using spatial scatter plots.
 
-    This function generates scatter plots for spatial enrichment scores of specified gene sets.
-    It uses the `sq.pl.spatial_scatter` method to create the plots and allows for customisation of plot
-    properties such as colour maps, marker size, and plot layout.
-
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix containing spatial and gene expression information.
 
     score_key : str or list of str, optional
-        A list of signature names (e.g. "enrichmap") for which enrichment scores are plotted. 
-        If None, defaults to plotting the "enrichmap" signature. If a single string is provided, it will be 
-        converted into a list with one element.
+        A list of signature names for which enrichment scores are plotted.
+        Defaults to ["enrichmap_score"].
 
     cmap : str, optional
-        The colormap for visualising the enrichment scores. Defaults to "seismic".
+        Colormap for visualisation. Defaults to "seismic".
 
     library_key : str, optional
-        The key in `adata.obs` that contains the library identifiers for different spatial libraries. 
-        Defaults to "library_id" if not provided.
+        Key in `adata.obs` for library identifiers. Defaults to "library_id".
 
     library_id : str or list of str, optional
-        A specific library ID or a list of library IDs to visualise. If None, visualises all libraries.
+        Specific library ID(s) to visualise. Defaults to all libraries.
 
     img_alpha : float, optional
-        The alpha blending value for image overlay. Defaults to 0.5.
+        Alpha value for image overlay. Defaults to 0.5.
 
     ncols : int, optional
-        The number of columns for arranging the plots in a grid layout. Defaults to 2.
+        Number of columns in the grid layout. Defaults to length of score_key.
 
     size : int, optional
-        The size of the scatter plot markers. Defaults to 2.
+        Scatter plot marker size. Defaults to 2.
 
     vcenter : int, optional
-        The central value for colour scaling. Defaults to 0.
+        Central value for colour scaling. Defaults to 0.
 
     save : str or None, optional
-        If specified, the plot will be saved to the file with the given filename (including extension). 
-        If None, the plot will not be saved.
+        Filename to save the plot. If None, plot is not saved.
 
     **kwargs : dict, optional
-        Additional keyword arguments passed to `sq.pl.spatial_scatter`.
-        This can include parameters like `color_map`, `size`, etc.
-        Refer to the `squidpy` documentation for more details on available parameters.
+        Additional arguments passed to `sq.pl.spatial_scatter`.
     """
     if score_key is None:
         score_key = ["enrichmap_score"]
@@ -75,6 +67,22 @@ def spatial_enrichmap(
     if ncols is None:
         ncols = len(score_key)
 
+    # Determine libraries to plot
+    all_libs = adata.obs[library_key].unique()
+    if library_id is None:
+        libs_to_plot = all_libs
+    elif isinstance(library_id, str):
+        libs_to_plot = [library_id]
+    else:
+        libs_to_plot = library_id
+
+    # Construct titles: one per combination of library and score key
+    titles = []
+    for lib in libs_to_plot:
+        for score in score_key:
+            clean_score = score.replace("_score", "")
+            titles.append(f"{lib}: {clean_score}")
+
     sq.pl.spatial_scatter(
         adata,
         color=score_key,
@@ -83,9 +91,10 @@ def spatial_enrichmap(
         ncols=ncols,
         vcenter=vcenter,
         img_alpha=img_alpha,
-        library_id=library_id,
+        library_id=libs_to_plot,
         library_key=library_key,
         frameon=False,
         save=save,
-        **kwargs
+        title=titles,
+        **kwargs,
     )
