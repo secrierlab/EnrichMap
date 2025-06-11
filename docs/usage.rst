@@ -44,29 +44,3 @@ Basic tutorial
        table_name="square_008um",
        coordinate_system="downscaled_hires"
    )
-
-Documentation
--------------
-
-Comprehensive documentation is available at:
-https://enrichmap.readthedocs.io/en/latest
-
-Contributing
-------------
-
-If you have ideas for new features or spot a bug, please open an issue or submit a pull request.
-
-License
--------
-
-This project is licensed under the GNU GENERAL PUBLIC LICENSE.
-
-Citation
---------
-
-Celik C & Secrier M (2025). *EnrichMap: Spatially-informed enrichment analysis for functional interpretation of spatial transcriptomics*. `biorxiv.com <https://www.biorxiv.org/content/10.1101/2025.05.30.656960v1>`_
-
-Copyright
----------
-
-This code is free and is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY. See the GNU General Public License for more details.
