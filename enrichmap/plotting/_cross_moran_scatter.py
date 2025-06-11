@@ -16,12 +16,13 @@ def cross_moran_scatter(
     adata: AnnData,
     score_x: str,
     score_y: str,
-    batch_key: str | None = None,
+    library_key: str | None = None,
+    library_id: str | list[str] | None = None,
     n_neighbours: int = 6,
     save: str | None = None,
 ):
     """
-    Plot cross-Moran scatterplots: score_x vs spatial lag of score_y, per sample or globally.
+    Plot cross-Moran scatterplots: score_x vs spatial lag of score_y, per library or globally.
 
     Parameters
     ----------
@@ -31,24 +32,31 @@ def cross_moran_scatter(
         Column in `adata.obs` for X-axis variable.
     score_y : str
         Column in `adata.obs` for which the spatial lag is computed (Y-axis).
-    batch_key : str or None
+    library_key : str or None
         Key in `adata.obs` indicating batch/sample/library identifiers.
         If None, computes a single plot using the entire dataset.
+    library_id : str, list of str, or None
+        Specific library or libraries to plot. If None, all libraries are used.
     n_neighbours : int
         Number of nearest neighbours for spatial weights.
     save : str or None
         If provided, saves the figure to the given file name.
     """
-    if batch_key is None:
+    if library_key is None:
         fig, ax = plt.subplots(figsize=(3, 3))
         batches = [adata]
         titles = ["Cross-Moran scatter plot"]
     else:
-        batches = [
-            adata[adata.obs[batch_key] == b].copy()
-            for b in adata.obs[batch_key].unique()
-        ]
-        titles = adata.obs[batch_key].unique().tolist()
+        all_ids = adata.obs[library_key].unique().tolist()
+        selected_ids = all_ids
+
+        if library_id is not None:
+            if isinstance(library_id, str):
+                library_id = [library_id]
+            selected_ids = [lib for lib in library_id if lib in all_ids]
+
+        batches = [adata[adata.obs[library_key] == b].copy() for b in selected_ids]
+        titles = selected_ids
         n = len(batches)
         ncols = int(np.ceil(np.sqrt(n)))
         nrows = int(np.ceil(n / ncols))
@@ -72,19 +80,19 @@ def cross_moran_scatter(
         else:
             r, p = np.nan, np.nan
 
-        ax = ax if batch_key is None else axes[i]
+        ax = ax if library_key is None else axes[i]
         ax.scatter(x, y_lag, s=10, alpha=0.3, color="lightblue")
         sns.regplot(
             x=x, y=y_lag, scatter=False, ax=ax, color="black", line_kws={"lw": 1}
         )
         ax.axhline(0, color="grey", lw=1, linestyle="--")
         ax.axvline(0, color="grey", lw=1, linestyle="--")
-        ax.set_title(f"Slide {title}\nr = {r:.2f}, p = {p:.2g}", fontsize=10)
-        ax.set_xlabel(score_x)
-        ax.set_ylabel(f"Spatial lag of {score_y}")
+        ax.set_title(f"{title}\nr = {r:.2f}, p = {p:.2g}", fontsize=10)
+        ax.set_xlabel(score_x.replace("_score", ""), fontsize=10)
+        ax.set_ylabel(f"Spatial lag of {score_y.replace('_score', '')}", fontsize=10)
         ax.grid(False)
 
-    if batch_key is not None:
+    if library_key is not None:
         for j in range(i + 1, len(axes)):
             axes[j].axis("off")
 
