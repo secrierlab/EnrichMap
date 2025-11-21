@@ -40,7 +40,7 @@ Usage
    # Run scoring
    em.tl.score(
        adata=adata,
-       gene_list=gene_set,
+       gene_set=gene_set,
        score_key="T_cell_signature",
        smoothing=True,  # by default
        correct_spatial_covariates=True,  # by default
@@ -50,7 +50,7 @@ Usage
    # Visualise
    em.pl.spatial_enrichmap(
        adata=adata,
-       score_key="T_cell_signature"
+       score_key="T_cell_signature_score"
    )
 
 .. note::
