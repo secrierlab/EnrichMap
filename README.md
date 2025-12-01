@@ -52,7 +52,7 @@ gene_set = ["CD3D", "CD3E", "CD8A"]
 # Run scoring
 em.tl.score(
     adata=adata,
-    gene_list=gene_set,
+    gene_set=gene_set,
     score_key="T_cell_signature",
     smoothing=True, # by default,
     correct_spatial_covariates=True, # by default
@@ -62,7 +62,7 @@ em.tl.score(
 # Visualise
 em.pl.spatial_enrichmap(
     adata=adata,
-    score_key="T_cell_signature"
+    score_key="T_cell_signature_score"
 )
 ```
 
