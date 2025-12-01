@@ -10,7 +10,7 @@ from scipy.sparse import issparse
 from statsmodels.gam.api import GLMGam, BSplines
 from scipy.stats import median_abs_deviation
 
-from ._infer_gene_weights import infer_gene_weights
+from _infer_gene_weights import infer_gene_weights
 
 sc.settings.verbosity = 0
 
@@ -25,9 +25,7 @@ def score(
     smoothing: bool = True,
     correct_spatial_covariates: bool = True,
     batch_key: str | None = None,
-    clip_min: float = -5.0,
-    clip_max: float = 5.0,
-) -> AnnData | None:
+) -> None:
     """
     Compute spatially smoothed and spatially corrected gene set enrichment scores for one or more gene signatures.
 
@@ -51,37 +49,28 @@ def score(
 
     spatial_key : str
         Key in `adata.obsm` containing spatial coordinates used for spatial covariate correction. By default, it is set to "spatial".
-        If the coordinates are stored in a different key, specify that key here.
 
     n_neighbours : int, default 6
-        Number of nearest spatial neighbours used for smoothing. This is passed to `squidpy.gr.spatial_neighbors`.
+        Number of nearest spatial neighbours used for smoothing.
 
     smoothing : bool, default True
-        Whether to perform spatial smoothing of signature scores using neighbour connectivity.
+        Whether to perform spatial smoothing of signature scores.
 
     correct_spatial_covariates : bool, default True
-        Whether to correct scores for spatial covariates using a Generalised Additive Model.
+        Whether to correct scores for spatial covariates using a GAM.
 
     batch_key : str or None, optional
-        Column in `adata.obs` indicating batch labels for batch-wise z-score normalisation and smoothing.
-        If None, all cells are treated as a single batch.
-
-    clip_min : float, default -5.0
-        Minimum value to clip the final scores to limit the influence of outliers.
-    clip_max : float, default 5.0
-        Maximum value to clip the final scores to limit the influence of outliers.
+        Column in `adata.obs` indicating batch labels.
 
     Returns
     -------
-    AnnData
-        The original `AnnData` object with additional scores stored in `adata.obs` under the key `{signature_name}_score`
-        and gene contributions stored in `adata.uns["gene_contributions"]`.
+    None
+        Scores are stored in `adata.obs` and gene contributions in `adata.uns["gene_contributions"]`.
     """
 
     # Determine gene_set if not provided
     if gene_set is None:
         if gene_weights is not None:
-            # Use genes from gene_weights
             gene_set = {
                 sig: list(weights.keys()) for sig, weights in gene_weights.items()
             }
@@ -100,10 +89,7 @@ def score(
 
     # Iterate over signatures
     for sig_name, genes in tqdm(gene_set.items(), desc="Scoring signatures"):
-        # Restrict to genes present in adata
         common_genes = list(set(genes).intersection(set(adata.var_names)))
-        if len(common_genes) == 0:
-            raise ValueError(f"No common genes found for signature {sig_name}")
         if len(common_genes) < 2:
             raise ValueError(
                 f"Signature '{sig_name}' has fewer than two genes in the dataset"
@@ -111,100 +97,78 @@ def score(
 
         # Determine gene weights
         if sig_name in gene_weights and gene_weights[sig_name] is not None:
-            # Use provided weights, restrict to common genes
             current_gene_weights = {
-                g: gene_weights[sig_name][g]
-                for g in common_genes
-                if g in gene_weights[sig_name]
+                g: gene_weights[sig_name].get(g, 1.0) for g in common_genes
             }
-            # Fill missing genes with weight 1.0
-            for g in common_genes:
-                if g not in current_gene_weights:
-                    current_gene_weights[g] = 1.0
         else:
             inferred_gene_weights[sig_name] = infer_gene_weights(adata, common_genes)
-            current_gene_weights = inferred_gene_weights[sig_name]
-
-        # Align dictionary of weights to common genes
-        gene_weight_dict = {g: current_gene_weights.get(g, 1.0) for g in common_genes}
+            current_gene_weights = {
+                g: inferred_gene_weights[sig_name].get(g, 1.0) for g in common_genes
+            }
 
         # Compute weighted expression
-        all_weighted = np.zeros(adata.n_obs)
+        weighted_matrix = np.zeros(adata.n_obs)
         contribution_matrix = {}
 
         for gene in common_genes:
             expr = adata[:, gene].X
             expr = expr.toarray().flatten() if issparse(expr) else expr.flatten()
-            weighted_expr = expr * gene_weight_dict[gene]
-            all_weighted += weighted_expr
+            weighted_expr = expr * current_gene_weights[gene]
+            weighted_matrix += weighted_expr
             contribution_matrix[gene] = weighted_expr
 
-        # Normalise by total weight
-        all_weighted /= np.sum(list(gene_weight_dict.values()))
-        raw_scores = all_weighted.copy()
+        # Do not normalise by total weight; keep weighted differences
+        raw_scores = weighted_matrix.copy()
 
         # Spatial smoothing
+        smoothed_scores = raw_scores.copy()
         if smoothing:
-            smoothed_scores = np.zeros_like(raw_scores)
-            batch_values = adata.obs[batch_key].unique() if batch_key else [None]
-
-            for batch in batch_values:
+            batches = adata.obs[batch_key].unique() if batch_key else [None]
+            for batch in batches:
                 mask = (
                     adata.obs[batch_key] == batch
                     if batch_key
-                    else np.ones(adata.n_obs, dtype=bool)
+                    else np.ones(adata.n_obs, bool)
                 )
                 adata_batch = adata[mask].copy()
-
                 sq.gr.spatial_neighbors(
                     adata_batch,
                     n_neighs=n_neighbors,
                     coord_type="generic",
                     key_added="spatial",
                 )
-
                 conn = adata_batch.obsp["spatial_connectivities"]
-                smoothed = conn.dot(raw_scores[mask]) / np.maximum(
+                smoothed_scores[mask] = conn.dot(raw_scores[mask]) / np.maximum(
                     conn.sum(axis=1).A1, 1e-10
                 )
-                smoothed_scores[mask] = smoothed
-
-        else:
-            smoothed_scores = raw_scores
 
         # Spatial covariate correction
+        corrected_scores = smoothed_scores.copy()
         if correct_spatial_covariates:
-            corrected_scores = np.zeros_like(smoothed_scores)
-            batch_values = adata.obs[batch_key].unique() if batch_key else [None]
-
-            for batch in batch_values:
+            batches = adata.obs[batch_key].unique() if batch_key else [None]
+            for batch in batches:
                 mask = (
                     adata.obs[batch_key] == batch
                     if batch_key
-                    else np.ones(adata.n_obs, dtype=bool)
+                    else np.ones(adata.n_obs, bool)
                 )
                 coords = adata.obsm[spatial_key][mask]
-
-                bs = BSplines(coords, df=[10, 10], degree=[3, 3])
+                bs = BSplines(
+                    coords, df=[10] * coords.shape[1], degree=[3] * coords.shape[1]
+                )
                 gam = GLMGam.from_formula(
-                    "y ~ 1",
-                    data={"y": smoothed_scores[mask]},
-                    smoother=bs,
+                    "y ~ 1", data={"y": smoothed_scores[mask]}, smoother=bs
                 )
                 result = gam.fit()
-
                 corrected_scores[mask] = smoothed_scores[mask] - result.fittedvalues
 
-        else:
-            corrected_scores = smoothed_scores
-
-        # Global robust scaling
+        # Robust scaling and clipping
         median = np.median(corrected_scores)
         mad = median_abs_deviation(corrected_scores, scale="normal")
-        corrected_scores = (corrected_scores - median) / mad
+        scaled_scores = (corrected_scores - median) / mad
 
-        # Store outputs
-        adata.obs[f"{sig_name}_score"] = corrected_scores
+        # Store results
+        adata.obs[f"{sig_name}_score"] = scaled_scores
         adata.uns["gene_contributions"][sig_name] = contribution_matrix
 
     return None
