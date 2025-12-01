@@ -203,9 +203,6 @@ def score(
         mad = median_abs_deviation(corrected_scores, scale="normal")
         corrected_scores = (corrected_scores - median) / mad
 
-        # Clipping
-        corrected_scores = np.clip(corrected_scores, clip_min, clip_max)
-
         # Store outputs
         adata.obs[f"{sig_name}_score"] = corrected_scores
         adata.uns["gene_contributions"][sig_name] = contribution_matrix
