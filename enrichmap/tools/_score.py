@@ -6,7 +6,6 @@ import scanpy as sc
 import numpy as np
 
 from tqdm import tqdm
-from sklearn.preprocessing import StandardScaler
 from scipy.sparse import issparse
 from statsmodels.gam.api import GLMGam, BSplines
 from scipy.stats import median_abs_deviation
@@ -18,7 +17,7 @@ sc.settings.verbosity = 0
 
 def score(
     adata: AnnData,
-    gene_set: list | dict,
+    gene_set: list | dict | None = None,
     gene_weights: dict | None = None,
     score_key: str | list | None = None,
     spatial_key: str | None = "spatial",
@@ -37,13 +36,14 @@ def score(
     adata : AnnData
         Annotated data matrix, containing expression values and spatial coordinates in `obsm`.
 
-    gene_set : list or dict
+    gene_set : list or dict or None
         Gene set(s) to be scored. If a list is provided, it is interpreted as a single gene signature.
         If a dict is provided, keys are signature names and values are lists of gene symbols.
+        If None, `gene_weights` must be provided and gene sets will be inferred from the keys of `gene_weights`.
 
     gene_weights : dict, optional
         Dictionary mapping signature names to dictionaries of gene weights (default is None).
-        If None, gene weights are inferred automatically.
+        If None, gene weights are inferred automatically. If provided, `gene_set` is overridden to match the keys.
 
     score_key : str, list, or None, optional
         Name or list of names to assign to the gene signature(s) if `gene_set` is provided as a list.
@@ -78,6 +78,17 @@ def score(
         and gene contributions stored in `adata.uns["gene_contributions"]`.
     """
 
+    # Determine gene_set if not provided
+    if gene_set is None:
+        if gene_weights is not None:
+            # Use genes from gene_weights
+            gene_set = {
+                sig: list(weights.keys()) for sig, weights in gene_weights.items()
+            }
+        else:
+            raise ValueError("Either gene_set or gene_weights must be provided.")
+
+    # Convert list → dict if needed
     if isinstance(gene_set, list):
         gene_set = {score_key or "enrichmap": gene_set}
 
@@ -87,7 +98,9 @@ def score(
     if "gene_contributions" not in adata.uns:
         adata.uns["gene_contributions"] = {}
 
+    # Iterate over signatures
     for sig_name, genes in tqdm(gene_set.items(), desc="Scoring signatures"):
+        # Restrict to genes present in adata
         common_genes = list(set(genes).intersection(set(adata.var_names)))
         if len(common_genes) == 0:
             raise ValueError(f"No common genes found for signature {sig_name}")
@@ -96,18 +109,26 @@ def score(
                 f"Signature '{sig_name}' has fewer than two genes in the dataset"
             )
 
-        if sig_name not in gene_weights:
+        # Determine gene weights
+        if sig_name in gene_weights and gene_weights[sig_name] is not None:
+            # Use provided weights, restrict to common genes
+            current_gene_weights = {
+                g: gene_weights[sig_name][g]
+                for g in common_genes
+                if g in gene_weights[sig_name]
+            }
+            # Fill missing genes with weight 1.0
+            for g in common_genes:
+                if g not in current_gene_weights:
+                    current_gene_weights[g] = 1.0
+        else:
             inferred_gene_weights[sig_name] = infer_gene_weights(adata, common_genes)
+            current_gene_weights = inferred_gene_weights[sig_name]
 
-        current_gene_weights = inferred_gene_weights.get(
-            sig_name, gene_weights.get(sig_name, {})
-        )
-        if len(current_gene_weights) != len(common_genes):
-            raise ValueError(
-                f"Number of gene weights does not match number of genes in {sig_name}"
-            )
+        # Align dictionary of weights to common genes
+        gene_weight_dict = {g: current_gene_weights.get(g, 1.0) for g in common_genes}
 
-        gene_weight_dict = {g: current_gene_weights.get(g, 1) for g in common_genes}
+        # Compute weighted expression
         all_weighted = np.zeros(adata.n_obs)
         contribution_matrix = {}
 
@@ -118,13 +139,15 @@ def score(
             all_weighted += weighted_expr
             contribution_matrix[gene] = weighted_expr
 
+        # Normalise by total weight
         all_weighted /= np.sum(list(gene_weight_dict.values()))
         raw_scores = all_weighted.copy()
 
-        # Spatial smoothing per batch
+        # Spatial smoothing
         if smoothing:
             smoothed_scores = np.zeros_like(raw_scores)
             batch_values = adata.obs[batch_key].unique() if batch_key else [None]
+
             for batch in batch_values:
                 mask = (
                     adata.obs[batch_key] == batch
@@ -132,24 +155,28 @@ def score(
                     else np.ones(adata.n_obs, dtype=bool)
                 )
                 adata_batch = adata[mask].copy()
+
                 sq.gr.spatial_neighbors(
                     adata_batch,
                     n_neighs=n_neighbors,
                     coord_type="generic",
                     key_added="spatial",
                 )
+
                 conn = adata_batch.obsp["spatial_connectivities"]
                 smoothed = conn.dot(raw_scores[mask]) / np.maximum(
                     conn.sum(axis=1).A1, 1e-10
                 )
                 smoothed_scores[mask] = smoothed
+
         else:
             smoothed_scores = raw_scores
 
-        # Spatial covariate correction per batch
+        # Spatial covariate correction
         if correct_spatial_covariates:
             corrected_scores = np.zeros_like(smoothed_scores)
             batch_values = adata.obs[batch_key].unique() if batch_key else [None]
+
             for batch in batch_values:
                 mask = (
                     adata.obs[batch_key] == batch
@@ -157,6 +184,7 @@ def score(
                     else np.ones(adata.n_obs, dtype=bool)
                 )
                 coords = adata.obsm[spatial_key][mask]
+
                 bs = BSplines(coords, df=[10, 10], degree=[3, 3])
                 gam = GLMGam.from_formula(
                     "y ~ 1",
@@ -164,18 +192,21 @@ def score(
                     smoother=bs,
                 )
                 result = gam.fit()
+
                 corrected_scores[mask] = smoothed_scores[mask] - result.fittedvalues
+
         else:
             corrected_scores = smoothed_scores
 
-        # Global robust scaling (median + MAD)
+        # Global robust scaling
         median = np.median(corrected_scores)
         mad = median_abs_deviation(corrected_scores, scale="normal")
         corrected_scores = (corrected_scores - median) / mad
 
-        # Clip extreme values to limit influence of outliers
+        # Clipping
         corrected_scores = np.clip(corrected_scores, clip_min, clip_max)
 
+        # Store outputs
         adata.obs[f"{sig_name}_score"] = corrected_scores
         adata.uns["gene_contributions"][sig_name] = contribution_matrix
 
