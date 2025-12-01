@@ -10,7 +10,7 @@ from scipy.sparse import issparse
 from statsmodels.gam.api import GLMGam, BSplines
 from scipy.stats import median_abs_deviation
 
-from _infer_gene_weights import infer_gene_weights
+from ._infer_gene_weights import infer_gene_weights
 
 sc.settings.verbosity = 0
 
@@ -117,7 +117,7 @@ def score(
             weighted_matrix += weighted_expr
             contribution_matrix[gene] = weighted_expr
 
-        # Do not normalise by total weight; keep weighted differences
+        # Keep weighted differences
         raw_scores = weighted_matrix.copy()
 
         # Spatial smoothing
@@ -162,7 +162,7 @@ def score(
                 result = gam.fit()
                 corrected_scores[mask] = smoothed_scores[mask] - result.fittedvalues
 
-        # Robust scaling and clipping
+        # Robust scaling
         median = np.median(corrected_scores)
         mad = median_abs_deviation(corrected_scores, scale="normal")
         scaled_scores = (corrected_scores - median) / mad
