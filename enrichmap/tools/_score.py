@@ -10,7 +10,7 @@ from scipy.sparse import issparse
 from statsmodels.gam.api import GLMGam, BSplines
 from scipy.stats import median_abs_deviation
 
-from ._infer_gene_weights import infer_gene_weights
+from enrichmap.tools._infer_gene_weights import infer_gene_weights
 
 sc.settings.verbosity = 0
 
@@ -68,7 +68,6 @@ def score(
         Scores are stored in `adata.obs` and gene contributions in `adata.uns["gene_contributions"]`.
     """
 
-    # Determine gene_set if not provided
     if gene_set is None:
         if gene_weights is not None:
             gene_set = {
@@ -77,7 +76,6 @@ def score(
         else:
             raise ValueError("Either gene_set or gene_weights must be provided.")
 
-    # Convert list → dict if needed
     if isinstance(gene_set, list):
         gene_set = {score_key or "enrichmap": gene_set}
 
@@ -87,7 +85,6 @@ def score(
     if "gene_contributions" not in adata.uns:
         adata.uns["gene_contributions"] = {}
 
-    # Iterate over signatures
     for sig_name, genes in tqdm(gene_set.items(), desc="Scoring signatures"):
         common_genes = list(set(genes).intersection(set(adata.var_names)))
         if len(common_genes) < 2:
@@ -117,7 +114,6 @@ def score(
             weighted_matrix += weighted_expr
             contribution_matrix[gene] = weighted_expr
 
-        # Keep weighted differences
         raw_scores = weighted_matrix.copy()
 
         # Spatial smoothing
@@ -162,12 +158,20 @@ def score(
                 result = gam.fit()
                 corrected_scores[mask] = smoothed_scores[mask] - result.fittedvalues
 
-        # Robust scaling
-        median = np.median(corrected_scores)
-        mad = median_abs_deviation(corrected_scores, scale="normal")
-        scaled_scores = (corrected_scores - median) / mad
+        # Robust scaling per batch
+        scaled_scores = np.zeros_like(corrected_scores)
+        batches = adata.obs[batch_key].unique() if batch_key else [None]
+        for batch in batches:
+            mask = (
+                adata.obs[batch_key] == batch
+                if batch_key
+                else np.ones(adata.n_obs, bool)
+            )
+            batch_scores = corrected_scores[mask]
+            median = np.median(batch_scores)
+            mad = median_abs_deviation(batch_scores, scale="normal")
+            scaled_scores[mask] = (batch_scores - median) / mad
 
-        # Store results
         adata.obs[f"{sig_name}_score"] = scaled_scores
         adata.uns["gene_contributions"][sig_name] = contribution_matrix
 
