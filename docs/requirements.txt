@@ -1,3 +1,6 @@
+pip
+setuptools
+wheel
 sphinx-book-theme
 ipykernel
 myst-nb
