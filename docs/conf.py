@@ -19,6 +19,8 @@ sys.path.insert(0, os.path.abspath(".."))
 # 2. xarray_schema's broken `from pkg_resources import ...` never executes
 _MOCK_MODULES = [
     "squidpy",
+    "squidpy.pl",
+    "squidpy.pl._spatial_utils",
     "spatialdata",
     "spatialdata._logging",
     "xarray_schema",
