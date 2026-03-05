@@ -165,7 +165,7 @@ def score(
                     else np.ones(adata.n_obs, bool)
                 )
                 coords = adata.obsm[spatial_key][mask]
-                gam = LinearGAM(te(0, 1, n_splines=[10, 10])).fit(coords, scores[mask])
+                gam = LinearGAM(te(0, 1)).fit(coords, scores[mask])
                 scores[mask] = scores[mask] - gam.predict(coords)
 
         adata.obs[f"{sig_name}_score"] = scores
