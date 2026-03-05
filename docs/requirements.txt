@@ -1,5 +1,4 @@
-pip
-setuptools>=65
+setuptools
 wheel
 sphinx-book-theme
 ipykernel

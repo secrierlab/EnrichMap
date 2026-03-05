@@ -65,7 +65,6 @@ epub_show_urls = "footnote"
 autosummary_generate = True
 autodoc_member_order = "bysource"
 autodoc_mock_imports = [
-    "scanpy",
     "anndata",
     "numpy",
     "scipy",
@@ -75,6 +74,8 @@ autodoc_mock_imports = [
     "scikit_gstat",
     "pandas",
     "seaborn",
+    "spatialdata",
+    "xarray_schema",
 ]
 
 # -- Options for HTML output ----------------------------------------------
