@@ -5,6 +5,7 @@ from pathlib import Path
 from functools import partial
 from docutils import nodes
 from typing import TYPE_CHECKING
+from importlib.metadata import version as _get_version, PackageNotFoundError
 
 HERE = Path(__file__).parent
 
@@ -12,8 +13,6 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
-
-import enrichmap
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -23,7 +22,10 @@ project = "EnrichMap"
 copyright = "2026, Cenk Celik"
 author = "Cenk Celik"
 
-release = enrichmap.__version__
+try:
+    release = _get_version("enrichmap")
+except PackageNotFoundError:
+    release = "unknown"
 version = ".".join(release.split(".")[:2])
 
 master_doc = "index"
@@ -63,6 +65,26 @@ epub_show_urls = "footnote"
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
+autodoc_mock_imports = [
+    "squidpy",
+    "spatialdata",
+    "xarray_schema",
+    "anndata",
+    "scanpy",
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "sklearn",
+    "tqdm",
+    "pygam",
+    "libpysal",
+    "esda",
+    "splot",
+    "skgstat",
+    "adjustText",
+]
 
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
