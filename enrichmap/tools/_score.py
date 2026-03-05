@@ -7,8 +7,7 @@ import numpy as np
 import logging
 from tqdm import tqdm
 from scipy.sparse import issparse
-from statsmodels.gam.api import GLMGam, BSplines
-from scipy.stats import median_abs_deviation
+from pygam import LinearGAM, te
 
 from enrichmap.tools._infer_gene_weights import infer_gene_weights
 from spatialdata._logging import logger
@@ -52,7 +51,7 @@ def score(
     spatial_key : str
         Key in `adata.obsm` containing spatial coordinates used for spatial covariate correction. By default, it is set to "spatial".
 
-    n_neighbours : int, default 6
+    n_neighbors : int, default 6
         Number of nearest spatial neighbours used for smoothing.
 
     smoothing : bool, default True
@@ -105,9 +104,11 @@ def score(
                 g: inferred_gene_weights[sig_name].get(g, 1.0) for g in common_genes
             }
 
-        # Compute weighted expression
+        # Step 1: Compute weighted average
+        # Z_j = (1 / sum(w_i)) * sum(w_i * x_ij)
         weighted_matrix = np.zeros(adata.n_obs)
         contribution_matrix = {}
+        weight_sum = sum(current_gene_weights[g] for g in common_genes)
 
         for gene in common_genes:
             expr = adata[:, gene].X
@@ -116,10 +117,22 @@ def score(
             weighted_matrix += weighted_expr
             contribution_matrix[gene] = weighted_expr
 
-        raw_scores = weighted_matrix.copy()
+        raw_scores = weighted_matrix / weight_sum
 
-        # Spatial smoothing
-        smoothed_scores = raw_scores.copy()
+        # Step 2: Batch z-score normalisation
+        # Z_j_tilde^(b) = (Z_j - mu_b) / sigma_b
+        if batch_key is not None:
+            for batch in adata.obs[batch_key].unique():
+                mask = adata.obs[batch_key] == batch
+                batch_scores = raw_scores[mask]
+                mu_b = np.mean(batch_scores)
+                sigma_b = np.std(batch_scores)
+                if sigma_b > 0:
+                    raw_scores[mask] = (batch_scores - mu_b) / sigma_b
+
+        # Step 3: Spatial smoothing
+        # Z_j_tilde = (1 / sum(A_jk)) * sum(A_jk * Z_k)
+        scores = raw_scores.copy()
         if smoothing:
             batches = adata.obs[batch_key].unique() if batch_key else [None]
             for batch in batches:
@@ -136,12 +149,13 @@ def score(
                     key_added="spatial",
                 )
                 conn = adata_batch.obsp["spatial_connectivities"]
-                smoothed_scores[mask] = conn.dot(raw_scores[mask]) / np.maximum(
+                scores[mask] = conn.dot(scores[mask]) / np.maximum(
                     conn.sum(axis=1).A1, 1e-10
                 )
 
-        # Spatial covariate correction
-        corrected_scores = smoothed_scores.copy()
+        # Step 4: Spatial covariate correction
+        # Z_j_tilde = alpha + f(x_j, y_j) + epsilon_j
+        # Corrected_j = Z_j_tilde - Z_j_tilde_hat
         if correct_spatial_covariates:
             batches = adata.obs[batch_key].unique() if batch_key else [None]
             for batch in batches:
@@ -151,28 +165,10 @@ def score(
                     else np.ones(adata.n_obs, bool)
                 )
                 coords = adata.obsm[spatial_key][mask]
-                bs = BSplines(coords, df=[10, 10], degree=[3, 3])
-                gam = GLMGam.from_formula(
-                    "y ~ 1", data={"y": smoothed_scores[mask]}, smoother=bs
-                )
-                result = gam.fit()
-                corrected_scores[mask] = smoothed_scores[mask] - result.fittedvalues
+                gam = LinearGAM(te(0, 1)).fit(coords, scores[mask])
+                scores[mask] = scores[mask] - gam.predict(coords)
 
-        # Robust scaling per batch
-        scaled_scores = np.zeros_like(corrected_scores)
-        batches = adata.obs[batch_key].unique() if batch_key else [None]
-        for batch in batches:
-            mask = (
-                adata.obs[batch_key] == batch
-                if batch_key
-                else np.ones(adata.n_obs, bool)
-            )
-            batch_scores = corrected_scores[mask]
-            median = np.median(batch_scores)
-            mad = median_abs_deviation(batch_scores, scale="normal")
-            scaled_scores[mask] = (batch_scores - median) / mad
-
-        adata.obs[f"{sig_name}_score"] = scaled_scores
+        adata.obs[f"{sig_name}_score"] = scores
         adata.uns["gene_contributions"][sig_name] = contribution_matrix
 
     return None
