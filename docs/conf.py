@@ -3,6 +3,7 @@
 from __future__ import annotations
 from pathlib import Path
 from functools import partial
+from importlib.metadata import version as get_version
 from docutils import nodes
 from typing import TYPE_CHECKING
 
@@ -13,8 +14,6 @@ import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
-import enrichmap
-
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
@@ -23,7 +22,7 @@ project = "EnrichMap"
 copyright = "2026, Cenk Celik"
 author = "Cenk Celik"
 
-release = enrichmap.__version__
+release = get_version("enrichmap")
 version = ".".join(release.split(".")[:2])
 
 master_doc = "index"
