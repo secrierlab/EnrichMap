@@ -71,8 +71,15 @@ autodoc_mock_imports = [
     "scipy",
     "sklearn",
     "matplotlib",
+    "pandas",
+    "seaborn",
     "pygam",
     "scikit_gstat",
+    "squidpy",
+    "spatialdata",
+    "dask",
+    "xarray",
+    "xarray_schema",
 ]
 
 # -- Options for HTML output ----------------------------------------------
