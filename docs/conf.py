@@ -38,10 +38,9 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "myst_nb",
-    "sphinx_book_theme",
 ]
 
-myst_nb_execute = "auto"
+nb_execution_mode = "off"
 
 myst_enable_extensions = [
     "amsmath",
