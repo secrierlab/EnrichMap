@@ -8,22 +8,23 @@ from typing import TYPE_CHECKING
 
 HERE = Path(__file__).parent
 
-import enrichmap
 import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
+
+import enrichmap
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
 
 # -- Project information
 project = "EnrichMap"
-copyright = "Cenk Celik"
+copyright = "2026, Cenk Celik"
 author = "Cenk Celik"
 
-release = "0.1"
-version = "0.1.5"
+release = enrichmap.__version__
+version = ".".join(release.split(".")[:2])
 
 master_doc = "index"
 
@@ -72,6 +73,8 @@ autodoc_mock_imports = [
     "matplotlib",
     "pygam",
     "scikit_gstat",
+    "pandas",
+    "seaborn",
 ]
 
 # -- Options for HTML output ----------------------------------------------
