@@ -9,6 +9,10 @@ from typing import TYPE_CHECKING
 HERE = Path(__file__).parent
 
 import enrichmap
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(".."))
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -59,6 +63,16 @@ epub_show_urls = "footnote"
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
+autodoc_mock_imports = [
+    "scanpy",
+    "anndata",
+    "numpy",
+    "scipy",
+    "sklearn",
+    "matplotlib",
+    "pygam",
+    "scikit_gstat",
+]
 
 # -- Options for HTML output ----------------------------------------------
 html_theme = "sphinx_book_theme"
