@@ -5,14 +5,62 @@ from pathlib import Path
 from functools import partial
 from docutils import nodes
 from typing import TYPE_CHECKING
-from importlib.metadata import version as _get_version, PackageNotFoundError
 
 HERE = Path(__file__).parent
 
 import os
 import sys
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(".."))
+
+# Mock heavy/broken dependencies before importing enrichmap so that:
+# 1. enrichmap can be imported successfully (registering enrichmap.pl / enrichmap.tl)
+# 2. xarray_schema's broken `from pkg_resources import ...` never executes
+_MOCK_MODULES = [
+    "squidpy",
+    "spatialdata",
+    "spatialdata._logging",
+    "xarray_schema",
+    "anndata",
+    "scanpy",
+    "numpy",
+    "scipy",
+    "scipy.sparse",
+    "scipy.spatial",
+    "scipy.spatial.distance",
+    "scipy.cluster",
+    "scipy.cluster.hierarchy",
+    "scipy.stats",
+    "pandas",
+    "matplotlib",
+    "matplotlib.pyplot",
+    "matplotlib.gridspec",
+    "matplotlib.colors",
+    "mpl_toolkits",
+    "mpl_toolkits.axes_grid1",
+    "seaborn",
+    "sklearn",
+    "sklearn.decomposition",
+    "sklearn.metrics",
+    "tqdm",
+    "pygam",
+    "libpysal",
+    "libpysal.weights",
+    "libpysal.weights.spatial_lag",
+    "esda",
+    "esda.moran",
+    "esda.geary",
+    "esda.getisord",
+    "splot",
+    "splot.esda",
+    "skgstat",
+    "adjustText",
+]
+for _mod in _MOCK_MODULES:
+    sys.modules[_mod] = MagicMock()
+
+import enrichmap  # noqa: E402  — must come after mocks
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
@@ -22,10 +70,7 @@ project = "EnrichMap"
 copyright = "2026, Cenk Celik"
 author = "Cenk Celik"
 
-try:
-    release = _get_version("enrichmap")
-except PackageNotFoundError:
-    release = "unknown"
+release = enrichmap.__version__
 version = ".".join(release.split(".")[:2])
 
 master_doc = "index"
