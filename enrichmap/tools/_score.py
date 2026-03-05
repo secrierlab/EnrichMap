@@ -4,14 +4,16 @@ from anndata import AnnData
 import squidpy as sq
 import scanpy as sc
 import numpy as np
-
+import logging
 from tqdm import tqdm
 from scipy.sparse import issparse
 from statsmodels.gam.api import GLMGam, BSplines
 from scipy.stats import median_abs_deviation
 
 from enrichmap.tools._infer_gene_weights import infer_gene_weights
+from spatialdata._logging import logger
 
+logger.setLevel(logging.ERROR)
 sc.settings.verbosity = 0
 
 
@@ -149,9 +151,7 @@ def score(
                     else np.ones(adata.n_obs, bool)
                 )
                 coords = adata.obsm[spatial_key][mask]
-                bs = BSplines(
-                    coords, df=[10] * coords.shape[1], degree=[3] * coords.shape[1]
-                )
+                bs = BSplines(coords, df=[10, 10], degree=[3, 3])
                 gam = GLMGam.from_formula(
                     "y ~ 1", data={"y": smoothed_scores[mask]}, smoother=bs
                 )
