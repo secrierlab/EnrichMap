@@ -1,5 +1,5 @@
 pip>=23
-setuptools>=65
+setuptools>=70
 wheel
 sphinx-book-theme
 ipykernel

@@ -65,16 +65,20 @@ epub_show_urls = "footnote"
 autosummary_generate = True
 autodoc_member_order = "bysource"
 autodoc_mock_imports = [
+    "scanpy",
     "anndata",
     "numpy",
     "scipy",
     "sklearn",
     "matplotlib",
-    "pygam",
-    "scikit_gstat",
     "pandas",
     "seaborn",
+    "pygam",
+    "scikit_gstat",
+    "squidpy",
     "spatialdata",
+    "dask",
+    "xarray",
     "xarray_schema",
 ]
 
