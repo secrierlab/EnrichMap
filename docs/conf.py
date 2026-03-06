@@ -89,7 +89,7 @@ extensions = [
     "myst_nb",
 ]
 
-nb_execution_mode = "auto"
+nb_execution_mode = "off"
 
 myst_enable_extensions = [
     "amsmath",
