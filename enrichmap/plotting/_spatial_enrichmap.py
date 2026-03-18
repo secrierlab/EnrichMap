@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import logging
+
+logging.getLogger("fontTools").setLevel(logging.WARNING)
+
 from anndata import AnnData
 import squidpy as sq
 import matplotlib.pyplot as plt

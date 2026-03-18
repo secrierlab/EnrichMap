@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import logging
+from spatialdata._logging import logger
+
+logging.getLogger("squidpy").setLevel(logging.WARNING)
+logger.setLevel(logging.ERROR)
+
 from anndata import AnnData
 import squidpy as sq
 import scanpy as sc
@@ -11,9 +17,7 @@ from scipy.sparse import issparse
 from pygam import LinearGAM, te
 
 from enrichmap.tools._infer_gene_weights import infer_gene_weights
-from spatialdata._logging import logger
 
-logger.setLevel(logging.ERROR)
 sc.settings.verbosity = 0
 
 
