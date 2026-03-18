@@ -121,7 +121,7 @@ def score(
                 g: inferred_gene_weights[sig_name].get(g, 1.0) for g in common_genes
             }
 
-        # Step 1: Compute weighted score (manuscript Eq. 1)
+        # Step 1: Compute weighted score
         # Z_j = (1 / N) * sum(w_i * x_ij)
         weighted_matrix = np.zeros(adata.n_obs)
         contribution_matrix = {}
@@ -136,7 +136,7 @@ def score(
 
         raw_scores = weighted_matrix / n_genes
 
-        # Step 2: Batch z-score normalisation (manuscript Eq. 2)
+        # Step 2: Batch z-score normalisation
         # Z_j_tilde^(b) = (Z_j - mu_b) / sigma_b
         if batch_key is not None:
             for batch in adata.obs[batch_key].unique():
@@ -147,7 +147,7 @@ def score(
                 if sigma_b > 0:
                     raw_scores[mask] = (batch_scores - mu_b) / sigma_b
 
-        # Step 3: Spatial smoothing (manuscript Eq. 3)
+        # Step 3: Spatial smoothing
         # Z_j_tilde = (1 / sum(A_jk)) * sum(A_jk * Z_k)
         scores = raw_scores.copy()
         if smoothing:
@@ -170,7 +170,7 @@ def score(
                     conn.sum(axis=1).A1, 1e-10
                 )
 
-        # Step 4: Spatial covariate correction (manuscript Eq. 4-5)
+        # Step 4: Spatial covariate correction
         # Z_j_tilde = alpha + f(x_j, y_j) + epsilon_j
         # Corrected_j = Z_j_tilde - Z_j_tilde_hat
         if correct_spatial_covariates:
