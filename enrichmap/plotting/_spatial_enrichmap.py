@@ -12,12 +12,12 @@ plt.rcParams["pdf.fonttype"] = "truetype"
 def spatial_enrichmap(
     adata: AnnData,
     score_key: str | list | None = None,
-    cmap: str = "seismic",
+    cmap: str = "RdBu_r",
     library_key: str | None = "library_id",
     library_id: _SeqStr | None = None,
     img_alpha: float = 0.5,
     ncols: int | None = None,
-    size: int = 2,
+    size: int = 1.5,
     vcenter: int = 0,
     save: str | None = None,
     **kwargs: dict,
@@ -33,7 +33,7 @@ def spatial_enrichmap(
         A list of signature names for which enrichment scores are plotted.
         Defaults to ["enrichmap_score"].
     cmap : str, optional
-        Colormap for visualisation. Defaults to "seismic".
+        Colormap for visualisation. Defaults to "RdBu_r".
     library_key : str or None, optional
         Key in `adata.obs` for library identifiers. Defaults to "library_id".
     library_id : str or list of str, optional
@@ -43,7 +43,7 @@ def spatial_enrichmap(
     ncols : int, optional
         Number of columns in the grid layout. Defaults to length of score_key.
     size : int, optional
-        Scatter plot marker size. Defaults to 2.
+        Scatter plot marker size. Defaults to 1.5.
     vcenter : int, optional
         Central value for colour scaling. Defaults to 0.
     save : str or None, optional

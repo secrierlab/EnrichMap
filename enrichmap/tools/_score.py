@@ -5,6 +5,7 @@ import squidpy as sq
 import scanpy as sc
 import numpy as np
 import logging
+import warnings
 from tqdm import tqdm
 from scipy.sparse import issparse
 from pygam import LinearGAM, te
@@ -69,16 +70,32 @@ def score(
         Scores are stored in `adata.obs` and gene contributions in `adata.uns["gene_contributions"]`.
     """
 
-    if gene_set is None:
-        if gene_weights is not None:
-            gene_set = {
-                sig: list(weights.keys()) for sig, weights in gene_weights.items()
-            }
-        else:
-            raise ValueError("Either gene_set or gene_weights must be provided.")
+    # Input resolution: gene_weights takes priority when provided
+    if gene_weights is not None:
+        # gene_weights is the primary driver — derive gene_set from it
+        gene_set = {sig: list(weights.keys()) for sig, weights in gene_weights.items()}
+    elif gene_set is not None:
+        # gene_set only, weights will be inferred via CV
+        if isinstance(gene_set, list):
+            gene_set = {score_key or "enrichmap": gene_set}
+    else:
+        raise ValueError("Either gene_set or gene_weights must be provided.")
 
-    if isinstance(gene_set, list):
-        gene_set = {score_key or "enrichmap": gene_set}
+    # Guard: warn if multiple slides may be present without batch_key
+    if batch_key is None and (smoothing or correct_spatial_covariates):
+        _batch_hints = ["library_id", "sample", "slide", "batch", "sample_id"]
+        for col in _batch_hints:
+            if col in adata.obs.columns and adata.obs[col].nunique() > 1:
+                warnings.warn(
+                    f"Column '{col}' in adata.obs has {adata.obs[col].nunique()} "
+                    f"unique values, suggesting multiple slides. Spatial smoothing "
+                    f"and covariate correction assume a single tissue section when "
+                    f"batch_key is None. Consider setting batch_key='{col}' to "
+                    f"avoid cross-slide artefacts.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                break
 
     inferred_gene_weights = {}
     gene_weights = gene_weights or {}
@@ -104,11 +121,11 @@ def score(
                 g: inferred_gene_weights[sig_name].get(g, 1.0) for g in common_genes
             }
 
-        # Step 1: Compute weighted average
-        # Z_j = (1 / sum(w_i)) * sum(w_i * x_ij)
+        # Step 1: Compute weighted score (manuscript Eq. 1)
+        # Z_j = (1 / N) * sum(w_i * x_ij)
         weighted_matrix = np.zeros(adata.n_obs)
         contribution_matrix = {}
-        weight_sum = sum(current_gene_weights[g] for g in common_genes)
+        n_genes = len(common_genes)
 
         for gene in common_genes:
             expr = adata[:, gene].X
@@ -117,9 +134,9 @@ def score(
             weighted_matrix += weighted_expr
             contribution_matrix[gene] = weighted_expr
 
-        raw_scores = weighted_matrix / weight_sum
+        raw_scores = weighted_matrix / n_genes
 
-        # Step 2: Batch z-score normalisation
+        # Step 2: Batch z-score normalisation (manuscript Eq. 2)
         # Z_j_tilde^(b) = (Z_j - mu_b) / sigma_b
         if batch_key is not None:
             for batch in adata.obs[batch_key].unique():
@@ -130,7 +147,7 @@ def score(
                 if sigma_b > 0:
                     raw_scores[mask] = (batch_scores - mu_b) / sigma_b
 
-        # Step 3: Spatial smoothing
+        # Step 3: Spatial smoothing (manuscript Eq. 3)
         # Z_j_tilde = (1 / sum(A_jk)) * sum(A_jk * Z_k)
         scores = raw_scores.copy()
         if smoothing:
@@ -153,7 +170,7 @@ def score(
                     conn.sum(axis=1).A1, 1e-10
                 )
 
-        # Step 4: Spatial covariate correction
+        # Step 4: Spatial covariate correction (manuscript Eq. 4-5)
         # Z_j_tilde = alpha + f(x_j, y_j) + epsilon_j
         # Corrected_j = Z_j_tilde - Z_j_tilde_hat
         if correct_spatial_covariates:
