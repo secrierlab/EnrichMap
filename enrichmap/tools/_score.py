@@ -1,22 +1,20 @@
 from __future__ import annotations
+from anndata import AnnData
+from tqdm import tqdm
+from scipy.sparse import issparse
+from pygam import LinearGAM, te
+from spatialdata._logging import logger
 
 import logging
-from spatialdata._logging import logger
+import squidpy as sq
+import scanpy as sc
+import numpy as np
+import warnings
+from ._infer_gene_weights import infer_gene_weights
 
 logging.getLogger("squidpy").setLevel(logging.WARNING)
 logger.setLevel(logging.ERROR)
 
-from anndata import AnnData
-import squidpy as sq
-import scanpy as sc
-import numpy as np
-
-import warnings
-from tqdm import tqdm
-from scipy.sparse import issparse
-from pygam import LinearGAM, te
-
-from enrichmap.tools._infer_gene_weights import infer_gene_weights
 
 sc.settings.verbosity = 0
 

@@ -9,6 +9,9 @@ from ._variogram_all import variogram_all
 from ._morans_correlogram import morans_correlogram
 from ._cross_moran_scatter import cross_moran_scatter
 from ._signature_correlation_heatmap import signature_correlation_heatmap
+from ._compare_morans_i import compare_morans_i
+from ._compare_wasserstein import compare_wasserstein
+from ._compare_variograms import compare_variograms
 
 __all__ = [
     "spatial_enrichmap",
@@ -19,5 +22,8 @@ __all__ = [
     "variogram_all",
     "morans_correlogram",
     "cross_moran_scatter",
-    "signature_correlation_heatmap"
+    "signature_correlation_heatmap",
+    "compare_morans_i",
+    "compare_wasserstein",
+    "compare_variograms",
 ]
