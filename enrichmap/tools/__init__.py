@@ -5,7 +5,7 @@ from ._infer_gene_weights import infer_gene_weights
 from ._permutation_test import permutation_test
 from ._cluster_gene_correlation import cluster_gene_correlation
 from ._generate_binary_labels import generate_binary_labels
-from ._compute_f1_scores import compute_f1_scores
+from ._benchmark_scoring_methods import benchmark_scoring_methods
 from ._compute_spatial_metrics import compute_spatial_metrics
 
 __all__ = [
@@ -14,6 +14,6 @@ __all__ = [
     "permutation_test",
     "cluster_gene_correlation",
     "generate_binary_labels",
-    "compute_f1_scores",
+    "benchmark_scoring_methods",
     "compute_spatial_metrics",
 ]
