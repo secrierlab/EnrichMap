@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Literal, Sequence
+from typing import Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,46 +22,38 @@ def benchmark_scoring_methods(
     label_source: str | np.ndarray,
     positive_class: str | None = None,
     batch_key: str | None = None,
-    metrics: Sequence[str] = ("auroc", "auprc", "f1_cv"),
+    metrics: Sequence[str] = ("auroc", "auprc", "f1"),
     plot: bool = True,
     figsize: tuple[float, float] = (6, 4),
     palette: str = "muted",
     save: str | None = None,
 ) -> pd.DataFrame:
     """
-    Benchmark multiple gene set scoring methods against a ground truth
-    using threshold-free and cross-validated classification metrics.
+    Benchmark multiple gene set scoring methods against a ground truth.
 
-    Given binary ground truth labels and continuous scores from different
-    methods (e.g. EnrichMap, AUCell, scanpy ``score_genes``, ssGSEA), this
-    function evaluates the discriminative performance of each method using
-    a leave-one-patient-out cross-validation scheme that prevents any
-    information leakage between threshold selection and evaluation.
+    Works seamlessly for a single sample or for multiple samples. When
+    ``batch_key`` is provided, a leave-one-patient-out cross-validation
+    scheme is used for threshold-dependent metrics, and all metrics are
+    reported both per patient and as a macro average. When ``batch_key``
+    is ``None``, metrics are computed on the full dataset.
 
     Evaluation strategy
     ~~~~~~~~~~~~~~~~~~~
-    Gene set scoring methods are **unsupervised**: they take a fixed gene
-    set and compute a score per spot without learning from the ground truth
-    labels. There is therefore no "training" in the supervised machine
-    learning sense, and no risk of label leakage in the scores themselves.
-    However, converting continuous scores into binary predictions requires
-    choosing a threshold, and selecting that threshold on the same data
-    used for evaluation inflates performance.
+    Gene set scoring methods are **unsupervised**: they compute a
+    continuous enrichment score per spot from a fixed gene set without
+    learning from ground truth labels. AUROC and AUPRC are therefore
+    valid on the full dataset without a train/test split.
 
-    This function addresses the concern as follows:
+    For the F1 score, a binarisation threshold is needed. The function
+    adapts its strategy based on whether multiple samples are available:
 
-    - **AUROC** and **AUPRC** are threshold-free ranking metrics that
-      require no binarisation. They are computed per patient (when
-      ``batch_key`` is provided) and macro-averaged across patients.
-    - **F1 (cross-validated)** uses leave-one-patient-out CV: for each
-      held-out patient, the F1-maximising threshold is learned on all
-      remaining patients and applied to the held-out patient. The
-      per-patient F1 values are then macro-averaged. This ensures the
-      threshold is never optimised on the data it is evaluated on.
-
-    When ``batch_key`` is ``None``, metrics are computed on the full
-    dataset without cross-validation (suitable for exploratory analysis
-    but not for reporting in a manuscript).
+    - **Single sample** (``batch_key=None``): the F1-maximising threshold
+      is found on the full dataset. Reported as **F1 (optimal)**. This is
+      an upper bound and should be interpreted with caution.
+    - **Multiple samples** (``batch_key`` provided): leave-one-patient-out
+      CV is used. For each held-out patient, the F1-maximising threshold
+      is learned on all other patients and applied to the held-out sample.
+      Reported as **F1 (CV)**.
 
     Ground truth labels
     ~~~~~~~~~~~~~~~~~~~
@@ -84,8 +76,8 @@ def benchmark_scoring_methods(
         e.g. ``["enrichmap_score", "aucell_score", "scanpy_score"]``.
 
     label_source : str or np.ndarray
-        Ground truth labels. If a string, interpreted as a column name in
-        ``adata.obs``. If the column is non-binary, ``positive_class``
+        Ground truth labels. If a string, interpreted as a column name
+        in ``adata.obs``. If the column is non-binary, ``positive_class``
         must be set. If an ``np.ndarray``, must be binary (0/1) with
         length equal to ``adata.n_obs``.
 
@@ -95,20 +87,21 @@ def benchmark_scoring_methods(
 
     batch_key : str or None, optional
         Column in ``adata.obs`` identifying patients or slides. When
-        provided, leave-one-patient-out cross-validation is used for
-        threshold-dependent metrics and all metrics are reported per
-        patient alongside the macro average. **Required for F1 (CV).**
+        provided, leave-one-patient-out cross-validation is used for F1
+        and all metrics are reported per patient alongside the macro
+        average. When ``None``, metrics are computed on the full dataset.
 
-    metrics : sequence of str, default ``("auroc", "auprc", "f1_cv")``
+    metrics : sequence of str, default ``("auroc", "auprc", "f1")``
         Which metrics to compute:
 
         - ``"auroc"``: area under the ROC curve.
         - ``"auprc"``: area under the precision-recall curve.
-        - ``"f1_cv"``: cross-validated F1 (leave-one-patient-out).
-          Requires ``batch_key``.
+        - ``"f1"``: F1 score. Automatically uses leave-one-patient-out
+          CV when ``batch_key`` is provided, or the dataset-wide optimal
+          threshold when it is not.
 
     plot : bool, default True
-        Whether to produce a grouped bar chart of macro-averaged results.
+        Whether to produce a grouped bar chart.
 
     figsize : tuple of float, default (6, 4)
         Figure size in inches.
@@ -123,11 +116,22 @@ def benchmark_scoring_methods(
     -------
     pd.DataFrame
         Tidy dataframe with columns ``method``, ``metric``, ``value``
-        and ``patient``. Macro-averaged rows have ``patient="macro_avg"``.
+        and ``patient``. When ``batch_key`` is provided, per-patient rows
+        have the patient identifier and macro-averaged rows have
+        ``patient="macro_avg"``. When ``batch_key`` is ``None``, all rows
+        have ``patient="pooled"``.
 
     Examples
     --------
-    Cross-validated benchmark across patients:
+    Single-sample benchmark:
+
+    >>> results = benchmark_scoring_methods(
+    ...     adata,
+    ...     score_keys=["enrichmap_score", "aucell_score"],
+    ...     label_source="is_tumor",
+    ... )
+
+    Multi-sample benchmark with cross-validated F1:
 
     >>> results = benchmark_scoring_methods(
     ...     adata,
@@ -137,29 +141,13 @@ def benchmark_scoring_methods(
     ...     batch_key="patient_id",
     ... )
 
-    Quick exploratory benchmark (no CV):
-
-    >>> results = benchmark_scoring_methods(
-    ...     adata,
-    ...     score_keys=["enrichmap_score", "aucell_score"],
-    ...     label_source="is_tumor",
-    ...     metrics=("auroc", "auprc"),
-    ... )
+    See Also
+    --------
+    compare_morans_i : Spatial autocorrelation comparison.
+    compare_wasserstein : Optimal transport distance comparison.
+    compare_variograms : Semivariogram-based spatial comparison.
     """
-    # Resolve ground truth labels
-
     labels = _resolve_labels(adata, label_source, positive_class)
-
-    # Validate
-
-    if "f1_cv" in metrics and batch_key is None:
-        raise ValueError(
-            "batch_key is required for cross-validated F1 ('f1_cv'). "
-            "Provide a patient/sample identifier column, or remove "
-            "'f1_cv' from metrics for a non-CV evaluation."
-        )
-
-    # Route to CV or pooled computation
 
     if batch_key is not None:
         result = _benchmark_cv(adata, score_keys, labels, batch_key, metrics)
@@ -178,122 +166,13 @@ def benchmark_scoring_methods(
 # Core computation
 
 
-def _benchmark_cv(adata, score_keys, labels, batch_key, metrics):
-    """
-    Leave-one-patient-out cross-validated benchmark.
-
-    For threshold-free metrics (AUROC, AUPRC), per-patient values are
-    computed and macro-averaged.
-
-    For F1 (CV), the optimal threshold is learned on all patients except
-    the held-out one, then applied to the held-out patient. Per-patient
-    F1 values are macro-averaged.
-    """
-    patients = adata.obs[batch_key].unique()
-    records: list[dict] = []
-
-    for method in score_keys:
-        if method not in adata.obs.columns:
-            continue
-
-        scores = adata.obs[method].values.astype(np.float64)
-
-        patient_aurocs, patient_auprcs, patient_f1s = [], [], []
-
-        for held_out in patients:
-            test_mask = (adata.obs[batch_key] == held_out).values
-            train_mask = ~test_mask
-
-            s_test = scores[test_mask]
-            y_test = labels[test_mask]
-            s_train = scores[train_mask]
-            y_train = labels[train_mask]
-
-            # Skip patients with no positive or no negative labels
-            if y_test.sum() == 0 or y_test.sum() == len(y_test):
-                continue
-
-            # AUROC per patient
-            if "auroc" in metrics:
-                try:
-                    val = roc_auc_score(y_test, s_test)
-                except ValueError:
-                    val = np.nan
-                patient_aurocs.append(val)
-                records.append(
-                    {
-                        "method": method,
-                        "metric": "AUROC",
-                        "value": val,
-                        "patient": held_out,
-                    }
-                )
-
-            # AUPRC per patient
-            if "auprc" in metrics:
-                try:
-                    val = average_precision_score(y_test, s_test)
-                except ValueError:
-                    val = np.nan
-                patient_auprcs.append(val)
-                records.append(
-                    {
-                        "method": method,
-                        "metric": "AUPRC",
-                        "value": val,
-                        "patient": held_out,
-                    }
-                )
-
-            # F1 (CV): threshold learned on training patients
-            if "f1_cv" in metrics:
-                _, thr = _optimal_f1(y_train, s_train)
-                preds = (s_test > thr).astype(int)
-                val = f1_score(y_test, preds, zero_division=0)
-                patient_f1s.append(val)
-                records.append(
-                    {
-                        "method": method,
-                        "metric": "F1 (CV)",
-                        "value": val,
-                        "patient": held_out,
-                    }
-                )
-
-        # Macro averages
-        if "auroc" in metrics and patient_aurocs:
-            records.append(
-                {
-                    "method": method,
-                    "metric": "AUROC",
-                    "value": np.nanmean(patient_aurocs),
-                    "patient": "macro_avg",
-                }
-            )
-        if "auprc" in metrics and patient_auprcs:
-            records.append(
-                {
-                    "method": method,
-                    "metric": "AUPRC",
-                    "value": np.nanmean(patient_auprcs),
-                    "patient": "macro_avg",
-                }
-            )
-        if "f1_cv" in metrics and patient_f1s:
-            records.append(
-                {
-                    "method": method,
-                    "metric": "F1 (CV)",
-                    "value": np.mean(patient_f1s),
-                    "patient": "macro_avg",
-                }
-            )
-
-    return pd.DataFrame(records)
-
-
 def _benchmark_pooled(adata, score_keys, labels, metrics):
-    """Pooled (non-CV) benchmark for exploratory use."""
+    """
+    Pooled (single-sample) benchmark.
+
+    AUROC and AUPRC are computed on the full dataset. F1 is computed at
+    the optimal threshold (upper bound).
+    """
     records: list[dict] = []
 
     for method in score_keys:
@@ -303,6 +182,9 @@ def _benchmark_pooled(adata, score_keys, labels, metrics):
         scores = adata.obs[method].values.astype(np.float64)
         valid = ~np.isnan(scores)
         s, y = scores[valid], labels[valid]
+
+        if y.sum() == 0 or y.sum() == len(y):
+            continue
 
         if "auroc" in metrics:
             try:
@@ -332,6 +214,105 @@ def _benchmark_pooled(adata, score_keys, labels, metrics):
                 }
             )
 
+        if "f1" in metrics:
+            f1_opt, _ = _optimal_f1(y, s)
+            records.append(
+                {
+                    "method": method,
+                    "metric": "F1 (optimal)",
+                    "value": f1_opt,
+                    "patient": "pooled",
+                }
+            )
+
+    return pd.DataFrame(records)
+
+
+def _benchmark_cv(adata, score_keys, labels, batch_key, metrics):
+    """
+    Leave-one-patient-out cross-validated benchmark.
+
+    AUROC and AUPRC are computed per patient and macro-averaged. F1 uses
+    a threshold learned on the training patients and applied to the
+    held-out patient.
+    """
+    patients = adata.obs[batch_key].unique()
+    records: list[dict] = []
+
+    for method in score_keys:
+        if method not in adata.obs.columns:
+            continue
+
+        scores = adata.obs[method].values.astype(np.float64)
+        per_patient = {"AUROC": [], "AUPRC": [], "F1 (CV)": []}
+
+        for held_out in patients:
+            test_mask = (adata.obs[batch_key] == held_out).values
+            train_mask = ~test_mask
+
+            s_test, y_test = scores[test_mask], labels[test_mask]
+            s_train, y_train = scores[train_mask], labels[train_mask]
+
+            if y_test.sum() == 0 or y_test.sum() == len(y_test):
+                continue
+
+            if "auroc" in metrics:
+                try:
+                    val = roc_auc_score(y_test, s_test)
+                except ValueError:
+                    val = np.nan
+                per_patient["AUROC"].append(val)
+                records.append(
+                    {
+                        "method": method,
+                        "metric": "AUROC",
+                        "value": val,
+                        "patient": held_out,
+                    }
+                )
+
+            if "auprc" in metrics:
+                try:
+                    val = average_precision_score(y_test, s_test)
+                except ValueError:
+                    val = np.nan
+                per_patient["AUPRC"].append(val)
+                records.append(
+                    {
+                        "method": method,
+                        "metric": "AUPRC",
+                        "value": val,
+                        "patient": held_out,
+                    }
+                )
+
+            if "f1" in metrics:
+                if y_train.sum() == 0 or y_train.sum() == len(y_train):
+                    continue
+                _, thr = _optimal_f1(y_train, s_train)
+                preds = (s_test > thr).astype(int)
+                val = f1_score(y_test, preds, zero_division=0)
+                per_patient["F1 (CV)"].append(val)
+                records.append(
+                    {
+                        "method": method,
+                        "metric": "F1 (CV)",
+                        "value": val,
+                        "patient": held_out,
+                    }
+                )
+
+        for metric_name, values in per_patient.items():
+            if values:
+                records.append(
+                    {
+                        "method": method,
+                        "metric": metric_name,
+                        "value": np.nanmean(values),
+                        "patient": "macro_avg",
+                    }
+                )
+
     return pd.DataFrame(records)
 
 
@@ -355,7 +336,8 @@ def _resolve_labels(adata, label_source, positive_class):
             else:
                 raise ValueError(
                     f"Column '{label_source}' is not binary. Set "
-                    f"positive_class to indicate which category is positive."
+                    f"positive_class to indicate which category is "
+                    f"positive."
                 )
     else:
         raise TypeError(
@@ -370,8 +352,9 @@ def _resolve_labels(adata, label_source, positive_class):
     n_pos = labels.sum()
     if n_pos == 0 or n_pos == len(labels):
         raise ValueError(
-            "Ground truth must contain both positive and negative cases. "
-            f"Found {n_pos} positives out of {len(labels)} spots."
+            "Ground truth must contain both positive and negative "
+            f"cases. Found {n_pos} positives out of {len(labels)} "
+            f"spots."
         )
 
     return labels
@@ -382,10 +365,7 @@ def _optimal_f1(y_true, scores):
     Find the threshold maximising F1 by scanning the precision-recall
     curve.
 
-    Returns
-    -------
-    best_f1 : float
-    best_threshold : float
+    Returns (best_f1, best_threshold).
     """
     precision, recall, thresholds = precision_recall_curve(y_true, scores)
     precision, recall = precision[:-1], recall[:-1]
@@ -404,7 +384,7 @@ def _plot_benchmark(
     palette: str = "muted",
     save: str | None = None,
 ) -> plt.Axes:
-    """Grouped bar chart of macro-averaged benchmark metrics."""
+    """Grouped bar chart of benchmark metrics across scoring methods."""
     df = df.copy()
     df["method_label"] = df["method"].str.replace("_score", "", regex=False)
 
