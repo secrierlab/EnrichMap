@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from anndata import AnnData
 
-from _infer_gene_weights import infer_gene_weights
+from ._infer_gene_weights import infer_gene_weights
 
 
 def build_signed_weights(
