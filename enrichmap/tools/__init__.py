@@ -7,6 +7,7 @@ from ._cluster_gene_correlation import cluster_gene_correlation
 from ._generate_binary_labels import generate_binary_labels
 from ._benchmark_scoring_methods import benchmark_scoring_methods
 from ._compute_spatial_metrics import compute_spatial_metrics
+from ._build_signed_weights import build_signed_weights
 
 __all__ = [
     "score",
@@ -16,4 +17,5 @@ __all__ = [
     "generate_binary_labels",
     "benchmark_scoring_methods",
     "compute_spatial_metrics",
+    "build_signed_weights",
 ]
