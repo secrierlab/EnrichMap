@@ -105,8 +105,12 @@ def score(
     if "gene_contributions" not in adata.uns:
         adata.uns["gene_contributions"] = {}
 
-    for sig_name, genes in tqdm(gene_set.items(), desc="Scoring signatures"):
+    pbar = tqdm(gene_set.items())
+    for sig_name, genes in pbar:
         common_genes = list(set(genes).intersection(set(adata.var_names)))
+        pbar.set_description(
+            f"Scoring {sig_name}: {len(common_genes)}/{len(genes)} genes found"
+        )
         if len(common_genes) < 2:
             raise ValueError(
                 f"Signature '{sig_name}' has fewer than two genes in the dataset"
