@@ -4,12 +4,28 @@ import os
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 from anndata import AnnData
 from scipy.stats import pearsonr
 from libpysal.weights import KNN
 from libpysal.weights.spatial_lag import lag_spatial
 
 plt.rcParams["pdf.fonttype"] = "truetype"
+
+# Quadrant colours and labels
+_QUADRANT_COLOURS = {
+    "HH": "#c62828",  # red — co-localised
+    "LL": "#1565c0",  # blue — co-absent
+    "LH": "#b0bec5",  # grey — spatial mismatch
+    "HL": "#b0bec5",  # grey — spatial mismatch
+}
+
+_QUADRANT_LABELS = {
+    "HH": "Co-enriched",
+    "LL": "Co-depleted",
+    "LH": "Discordant",
+    "HL": "Discordant",
+}
 
 
 def cross_moran_scatter(
@@ -80,17 +96,60 @@ def cross_moran_scatter(
         else:
             r, p = np.nan, np.nan
 
-        ax = ax if library_key is None else axes[i]
-        ax.scatter(x, y_lag, s=10, alpha=0.3, color="lightblue")
+        # Assign quadrant labels
+        quadrants = np.full(len(x), "LL", dtype=object)
+        quadrants[(x >= 0) & (y_lag >= 0)] = "HH"
+        quadrants[(x >= 0) & (y_lag < 0)] = "HL"
+        quadrants[(x < 0) & (y_lag >= 0)] = "LH"
+        quadrants[(x < 0) & (y_lag < 0)] = "LL"
+
+        current_ax = ax if library_key is None else axes[i]
+
+        # Plot points coloured by quadrant
+        for q in ["LH", "HL", "LL", "HH"]:  # draw HH/LL last so they're on top
+            q_mask = quadrants == q
+            if np.any(q_mask):
+                current_ax.scatter(
+                    x[q_mask],
+                    y_lag[q_mask],
+                    s=10,
+                    alpha=0.3,
+                    color=_QUADRANT_COLOURS[q],
+                    rasterized=True,
+                )
+
         sns.regplot(
-            x=x, y=y_lag, scatter=False, ax=ax, color="black", line_kws={"lw": 1}
+            x=x,
+            y=y_lag,
+            scatter=False,
+            ax=current_ax,
+            color="black",
+            line_kws={"lw": 1},
         )
-        ax.axhline(0, color="grey", lw=1, linestyle="--")
-        ax.axvline(0, color="grey", lw=1, linestyle="--")
-        ax.set_title(f"{title}\nr = {r:.2f}, p = {p:.2g}", fontsize=10)
-        ax.set_xlabel(score_x.replace("_score", ""), fontsize=10)
-        ax.set_ylabel(f"Spatial lag of {score_y.replace('_score', '')}", fontsize=10)
-        ax.grid(False)
+        current_ax.axhline(0, color="grey", lw=0.8, linestyle="--")
+        current_ax.axvline(0, color="grey", lw=0.8, linestyle="--")
+        current_ax.set_title(f"{title}\nr = {r:.2f}, p = {p:.2g}", fontsize=10)
+        current_ax.set_xlabel(score_x.replace("_score", ""), fontsize=10)
+        current_ax.set_ylabel(
+            f"Spatial lag of {score_y.replace('_score', '')}", fontsize=10
+        )
+        current_ax.grid(False)
+        current_ax.set_box_aspect(1)
+
+        # Legend
+        legend_elements = [
+            Patch(facecolor=_QUADRANT_COLOURS["HH"], label=_QUADRANT_LABELS["HH"]),
+            Patch(facecolor=_QUADRANT_COLOURS["LL"], label=_QUADRANT_LABELS["LL"]),
+            Patch(facecolor=_QUADRANT_COLOURS["LH"], label=_QUADRANT_LABELS["LH"]),
+        ]
+        current_ax.legend(
+            handles=legend_elements,
+            fontsize=6,
+            loc="upper left",
+            frameon=False,
+            handletextpad=0.4,
+            handlelength=1,
+        )
 
     if library_key is not None:
         for j in range(i + 1, len(axes)):
