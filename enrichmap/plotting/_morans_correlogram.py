@@ -1,24 +1,39 @@
 from __future__ import annotations
 
 import os
-import squidpy as sq
-import matplotlib.pyplot as plt
 import numpy as np
-
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 from anndata import AnnData
 from libpysal.weights import KNN
 from esda.moran import Moran
-from splot.esda import moran_scatterplot
+from libpysal.weights.spatial_lag import lag_spatial
 
 plt.rcParams["pdf.fonttype"] = "truetype"
+
+_QUADRANT_COLOURS = {
+    "HH": "#c62828",
+    "LL": "#1565c0",
+    "LH": "#b0bec5",
+    "HL": "#b0bec5",
+}
+
+_QUADRANT_LABELS = {
+    "HH": "Co-enriched",
+    "LL": "Co-depleted",
+    "LH": "Discordant",
+    "HL": "Discordant",
+}
+
 
 def morans_correlogram(
     adata: AnnData,
     score_key: str,
     library_key: str | None = None,
-    library_id: str | None = None,
+    library_id: str | list[str] | None = None,
+    n_neighbours: int = 6,
     save: str | None = None,
-    multipanel: bool = False
 ) -> None:
     """
     Plot Moran scatterplots (spatial correlograms) for one or multiple spatial libraries.
@@ -26,118 +41,124 @@ def morans_correlogram(
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix with scores in `adata.obs[score_key]`.
-
+        Annotated data matrix with scores in ``adata.obs[score_key]``.
     score_key : str
-        Column in `adata.obs` containing the variable to assess spatial autocorrelation.
-
+        Column in ``adata.obs`` containing the variable to assess spatial
+        autocorrelation.
     library_key : str or None, optional
-        Column in `adata.obs` identifying spatial libraries. Required for `multipanel=True`.
-
-    library_id : str or None, optional
-        Specific library to plot. Only used if `multipanel=False`.
-
+        Column in ``adata.obs`` identifying spatial libraries. If None,
+        computes a single plot using the entire dataset.
+    library_id : str, list of str, or None, optional
+        Specific library or libraries to plot. If None, all libraries are used.
+    n_neighbours : int, default 6
+        Number of nearest neighbours for spatial weights.
     save : str or None, optional
-        If provided, saves figure to `figures/{save}`.
-
-    multipanel : bool, default False
-        If True, plots Moran scatterplots for all libraries in a grid layout.
+        If provided, saves figure to ``figures/{save}``.
     """
-    scatter_kwds = {
-        "s": 10,
-        "alpha": 0.3,
-        "edgecolor": "k",
-        "linewidth": 0,
-    }
-    fitline_kwds = {
-        "color": "darkred",
-        "linestyle": "-",
-        "linewidth": 1,
-        "label": "Fit line"
-    }
-
-    if multipanel:
-        if library_key is None:
-            raise ValueError("`library_key` must be provided for multipanel plotting.")
-
-        libraries = adata.obs[library_key].unique().tolist()
-        n_panels = len(libraries)
-        ncols = min(n_panels, 3)
-        nrows = int(np.ceil(n_panels / ncols))
-
-        fig, axes = plt.subplots(
-            nrows=nrows,
-            ncols=ncols,
-            figsize=(3 * ncols, 3 * nrows),
-            constrained_layout=True,
-            sharex=True,
-            sharey=True
-        )
-        axes = axes.flatten()
-
-        for i, lib in enumerate(libraries):
-            adata_subset = adata[adata.obs[library_key] == lib].copy()
-
-            if "spatial_neighbors" not in adata_subset.uns:
-                sq.gr.spatial_neighbors(adata_subset, n_neighs=6, coord_type="generic", key_added="spatial")
-
-            score = adata_subset.obs[score_key].values
-            spatial = adata_subset.obsm["spatial"]
-            mask = ~np.isnan(score)
-            score = score[mask]
-            spatial = spatial[mask]
-
-            W = KNN.from_array(spatial)
-            W.transform = "r"
-            moran = Moran(score, W)
-
-            moran_scatterplot(moran, p=0.05, ax=axes[i], aspect_equal=True,
-                              scatter_kwds=scatter_kwds, fitline_kwds=fitline_kwds)
-            axes[i].set_title(f"Slide {lib}\nMoran’s I = {moran.I:.2f}, p = {moran.p_sim:.3f}", fontsize=10)
-            axes[i].set_xlabel("Score")
-            axes[i].set_ylabel("Spatial lag")
-            axes[i].grid(False)
-
-        for j in range(i + 1, len(axes)):
-            fig.delaxes(axes[j])
-
-        if save:
-            os.makedirs("figures", exist_ok=True)
-            if not os.path.dirname(save):
-                save = os.path.join("figures", save)
-            plt.savefig(save, dpi=300, bbox_inches="tight")
-        plt.show()
-
+    # Resolve batches
+    if library_key is None:
+        batches = [adata]
+        titles = [None]
     else:
-        if library_key is not None:
-            if library_id is None:
-                raise ValueError("If library_key is provided, library_id must also be specified.")
-            adata = adata[adata.obs[library_key] == library_id].copy()
+        all_ids = adata.obs[library_key].unique().tolist()
+        if library_id is not None:
+            if isinstance(library_id, str):
+                library_id = [library_id]
+            all_ids = [lib for lib in library_id if lib in all_ids]
+        batches = [adata[adata.obs[library_key] == b].copy() for b in all_ids]
+        titles = all_ids
 
-        if "spatial_neighbors" not in adata.uns:
-            sq.gr.spatial_neighbors(adata, n_neighs=6, coord_type="generic", key_added="spatial")
+    n = len(batches)
+    ncols = min(n, 3)
+    nrows = int(np.ceil(n / ncols))
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        figsize=(3 * ncols, 3 * nrows),
+        constrained_layout=True,
+        squeeze=False,
+    )
+    axes = axes.ravel()
 
-        score = adata.obs[score_key].values
-        spatial = adata.obsm["spatial"]
+    for i, (ad, title) in enumerate(zip(batches, titles)):
+        coords = ad.obsm["spatial"]
+        score = ad.obs[score_key].values
+
         mask = ~np.isnan(score)
         score = score[mask]
-        spatial = spatial[mask]
+        coords = coords[mask]
 
-        W = KNN.from_array(spatial)
+        W = KNN.from_array(coords, k=n_neighbours)
         W.transform = "r"
         moran = Moran(score, W)
+        score_lag = lag_spatial(W, score)
 
-        fig, ax = moran_scatterplot(moran, p=0.05, aspect_equal=True,
-                                    scatter_kwds=scatter_kwds, fitline_kwds=fitline_kwds)
-        fig.set_size_inches(3, 3)
-        ax.set_title(f"Moran’s I = {moran.I:.2f}, p = {moran.p_sim:.3f}", fontsize=10)
-        ax.set_ylabel("Spatial lag")
-        ax.set_xlabel("Score")
+        # Assign quadrants
+        quadrants = np.full(len(score), "LL", dtype=object)
+        quadrants[(score >= 0) & (score_lag >= 0)] = "HH"
+        quadrants[(score >= 0) & (score_lag < 0)] = "HL"
+        quadrants[(score < 0) & (score_lag >= 0)] = "LH"
+        quadrants[(score < 0) & (score_lag < 0)] = "LL"
+
+        ax = axes[i]
+
+        # Draw quadrants — HH/LL on top
+        for q in ["LH", "HL", "LL", "HH"]:
+            q_mask = quadrants == q
+            if np.any(q_mask):
+                ax.scatter(
+                    score[q_mask],
+                    score_lag[q_mask],
+                    s=10,
+                    alpha=0.3,
+                    color=_QUADRANT_COLOURS[q],
+                    rasterized=True,
+                )
+
+        sns.regplot(
+            x=score,
+            y=score_lag,
+            scatter=False,
+            ax=ax,
+            color="black",
+            line_kws={"lw": 1},
+        )
+        ax.axhline(0, color="grey", lw=0.8, linestyle="--")
+        ax.axvline(0, color="grey", lw=0.8, linestyle="--")
+
+        # Title
+        title_str = f"Moran's I = {moran.I:.2f}, p = {moran.p_sim:.3f}"
+        if title is not None:
+            title_str = f"{title}\n{title_str}"
+        ax.set_title(title_str, fontsize=10)
+        ax.set_xlabel(score_key.replace("_score", ""), fontsize=10)
+        ax.set_ylabel("Spatial lag", fontsize=10)
         ax.grid(False)
+        ax.set_box_aspect(1)
 
-        if save:
-            os.makedirs("figures", exist_ok=True)
-            if not os.path.dirname(save):
-                save = os.path.join("figures", save)
-            plt.savefig(save, dpi=300, bbox_inches="tight")
-        plt.show()
+        # Legend
+        legend_elements = [
+            Patch(facecolor=_QUADRANT_COLOURS["HH"], label=_QUADRANT_LABELS["HH"]),
+            Patch(facecolor=_QUADRANT_COLOURS["LL"], label=_QUADRANT_LABELS["LL"]),
+            Patch(facecolor=_QUADRANT_COLOURS["LH"], label=_QUADRANT_LABELS["LH"]),
+        ]
+        ax.legend(
+            handles=legend_elements,
+            fontsize=6,
+            loc="upper left",
+            frameon=False,
+            handletextpad=0.4,
+            handlelength=1,
+        )
+
+    # Remove unused axes
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    if save:
+        os.makedirs("figures", exist_ok=True)
+        if not os.path.dirname(save):
+            save = os.path.join("figures", save)
+        plt.savefig(save, dpi=300, bbox_inches="tight")
+
+    plt.show()
