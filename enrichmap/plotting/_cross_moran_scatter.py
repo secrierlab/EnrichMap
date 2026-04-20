@@ -12,20 +12,37 @@ from libpysal.weights.spatial_lag import lag_spatial
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
-# Quadrant colours and labels
-_QUADRANT_COLOURS = {
-    "HH": "#c62828",  # red — co-localised
-    "LL": "#1565c0",  # blue — co-absent
-    "LH": "#b0bec5",  # grey — spatial mismatch
-    "HL": "#b0bec5",  # grey — spatial mismatch
-}
 
-_QUADRANT_LABELS = {
-    "HH": "Co-enriched",
-    "LL": "Co-depleted",
-    "LH": "Discordant",
-    "HL": "Discordant",
-}
+# Quadrant styling based on correlation direction
+def _quadrant_style(r: float) -> tuple[dict, dict]:
+    """Return colours and labels appropriate for the correlation sign."""
+    if r >= 0:
+        colours = {
+            "HH": "#c62828",  # red — concordant
+            "LL": "#1565c0",  # blue — concordant
+            "LH": "#b0bec5",  # grey — discordant
+            "HL": "#b0bec5",
+        }
+        labels = {
+            "HH": "Co-enriched",
+            "LL": "Co-depleted",
+            "LH": "Discordant",
+            "HL": "Discordant",
+        }
+    else:
+        colours = {
+            "LH": "#7b1fa2",  # purple — anti-correlated
+            "HL": "#7b1fa2",
+            "HH": "#b0bec5",  # grey — discordant
+            "LL": "#b0bec5",
+        }
+        labels = {
+            "LH": "Anti-correlated",
+            "HL": "Anti-correlated",
+            "HH": "Discordant",
+            "LL": "Discordant",
+        }
+    return colours, labels
 
 
 def cross_moran_scatter(
@@ -103,10 +120,21 @@ def cross_moran_scatter(
         quadrants[(x < 0) & (y_lag >= 0)] = "LH"
         quadrants[(x < 0) & (y_lag < 0)] = "LL"
 
+        # Direction-aware colours and labels
+        q_colours, q_labels = _quadrant_style(r)
+
         current_ax = ax if library_key is None else axes[i]
 
-        # Plot points coloured by quadrant
-        for q in ["LH", "HL", "LL", "HH"]:  # draw HH/LL last so they're on top
+        # Rasterise for high-resolution platforms (> standard Visium)
+        rasterize = len(x) > 5000
+
+        # Draw discordant quadrants first, concordant on top
+        if r >= 0:
+            draw_order = ["LH", "HL", "LL", "HH"]
+        else:
+            draw_order = ["HH", "LL", "LH", "HL"]
+
+        for q in draw_order:
             q_mask = quadrants == q
             if np.any(q_mask):
                 current_ax.scatter(
@@ -114,8 +142,9 @@ def cross_moran_scatter(
                     y_lag[q_mask],
                     s=10,
                     alpha=0.3,
-                    color=_QUADRANT_COLOURS[q],
-                    rasterized=True,
+                    color=q_colours[q],
+                    edgecolors="none",
+                    rasterized=rasterize,
                 )
 
         sns.regplot(
@@ -136,12 +165,18 @@ def cross_moran_scatter(
         current_ax.grid(False)
         current_ax.set_box_aspect(1)
 
-        # Legend
-        legend_elements = [
-            Patch(facecolor=_QUADRANT_COLOURS["HH"], label=_QUADRANT_LABELS["HH"]),
-            Patch(facecolor=_QUADRANT_COLOURS["LL"], label=_QUADRANT_LABELS["LL"]),
-            Patch(facecolor=_QUADRANT_COLOURS["LH"], label=_QUADRANT_LABELS["LH"]),
-        ]
+        # Legend — show concordant pair + discordant
+        if r >= 0:
+            legend_elements = [
+                Patch(facecolor=q_colours["HH"], label=q_labels["HH"]),
+                Patch(facecolor=q_colours["LL"], label=q_labels["LL"]),
+                Patch(facecolor=q_colours["LH"], label=q_labels["LH"]),
+            ]
+        else:
+            legend_elements = [
+                Patch(facecolor=q_colours["LH"], label=q_labels["LH"]),
+                Patch(facecolor=q_colours["HH"], label=q_labels["HH"]),
+            ]
         current_ax.legend(
             handles=legend_elements,
             fontsize=6,
