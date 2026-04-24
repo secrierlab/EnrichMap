@@ -316,7 +316,9 @@ def gene_contributions_heatmap(
             axes[j].axis("off")
 
     if save:
-        os.makedirs(os.path.dirname(save) or "figures", exist_ok=True)
+        os.makedirs("figures", exist_ok=True)
+        if not os.path.dirname(save):
+            save = os.path.join("figures", save)
         plt.savefig(save, dpi=300, bbox_inches="tight")
 
     plt.show()
