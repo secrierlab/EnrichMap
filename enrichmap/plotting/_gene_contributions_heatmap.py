@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import linkage, leaves_list
 from scipy.spatial.distance import pdist
 from sklearn.decomposition import PCA
+import squidpy as sq
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
@@ -17,133 +18,107 @@ plt.rcParams["pdf.fonttype"] = "truetype"
 def gene_contributions_heatmap(
     adata: AnnData,
     score_key: str,
-    top_n_genes: int = 10,
+    top_n_genes: int = 5,
+    bottom_n_genes: int = 5,
     cluster_genes: bool = True,
-    order_spots: Literal["spatial", "cluster"] | None = "spatial",
+    order_spots: Literal["spatial", "cluster", "coherence"] | None = "coherence",
     spatial_key: str = "spatial",
-    cmap: str = "Reds",
+    cmap: str = "RdBu_r",
     fontsize: int = 8,
-    center: int = 0,
+    center: float = 0.0,
     batch_key: str | None = None,
     library_id: str | list | None = None,
     ncols: int = 2,
     figsize: tuple = (12, 6),
     save: str | None = None,
+    n_neighbors: int = 6,
 ) -> None:
     """
-    Visualise gene contributions from spatial gene set scoring as heatmaps,
-    optionally clustered by contribution profile similarity and ordered by
-    spatial proximity.
+    Spatial gene contribution heatmap with expression scaling and spatial ordering.
 
-    The top contributing genes (by mean absolute contribution) are selected
-    first. Their ordering and the ordering of spots along the x-axis are
-    then determined by the ``cluster_genes`` and ``order_spots`` parameters:
+    This function visualises gene contribution matrices derived from spatial
+    gene set scoring. It combines expression magnitude, spatial autocorrelation,
+    and graph-based spatial coherence into a single interpretable heatmap.
 
-    - **Gene axis (rows):** when ``cluster_genes=True``, genes are
-      hierarchically clustered by the similarity of their spot-level
-      contribution profiles, so genes that co-localise in the same tissue
-      regions appear adjacent. This captures both expression magnitude and
-      spatial pattern in a single ordering. When ``False``, genes are
-      sorted by descending mean contribution (original behaviour).
+    Core design:
+    - Rows = genes (selected by extreme contribution: high + low)
+    - Columns = spots
+    - Values = z-scored gene contributions (per gene)
 
-    - **Spot axis (columns):** when ``order_spots="spatial"``, spots are
-      ordered by their position along the first principal component of the
-      spatial coordinates, giving a linear sweep across the tissue that
-      makes spatial domains visible as contiguous colour blocks. When
-      ``"cluster"``, spots are hierarchically clustered by their gene
-      contribution profiles, grouping spots with similar enrichment
-      patterns regardless of physical location. When ``None``, spots
-      retain their original order.
-
-    If ``batch_key`` is provided, one subplot is generated per batch (or
-    per specified ``library_id``), enabling batch-wise comparison.
+    The pipeline explicitly separates three ordering layers:
+    1. Gene selection by mean absolute contribution
+    2. Gene ordering by expression + Moran’s I spatial autocorrelation
+    3. Spot ordering by spatial structure or spatial coherence
 
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix. Gene contributions must be stored in
-        ``adata.uns["gene_contributions"]`` (populated by
-        ``enrichmap.tools.score``).
+        Input AnnData containing gene contribution matrices in:
+        adata.uns["gene_contributions"][score_key]
 
     score_key : str
-        Name of the gene signature as used in ``enrichmap.tools.score``.
+        Key identifying the gene set or signature.
 
-    top_n_genes : int, default 10
-        Number of top contributing genes to display, selected by mean
-        absolute contribution.
+    top_n_genes : int
+        Number of highest contributing genes to include.
 
-    cluster_genes : bool, default True
-        Whether to hierarchically cluster genes (rows) by the similarity
-        of their contribution profiles. When ``True``, genes that share
-        spatial co-localisation patterns appear adjacent in the heatmap.
-        When ``False``, genes are sorted by descending mean contribution.
+    bottom_n_genes : int
+        Number of lowest contributing genes to include.
 
-    order_spots : ``"spatial"`` | ``"cluster"`` | None, default ``"spatial"``
-        How to order spots (columns) in the heatmap:
+    cluster_genes : bool
+        Whether to hierarchically cluster genes by similarity of spatial
+        contribution profiles.
 
-        - ``"spatial"``: order by the first principal component of the
-          spatial coordinates, producing a linear sweep across the tissue.
-        - ``"cluster"``: hierarchical clustering of spots by their gene
-          contribution profiles.
-        - ``None``: retain the original spot order.
+    order_spots : {"spatial", "cluster", "coherence", None}
+        Strategy for ordering spots:
+        - spatial: PCA projection of coordinates
+        - cluster: hierarchical clustering of spot profiles
+        - coherence: graph-based spatial smoothness (local signal consistency)
+        - None: original order
 
-    spatial_key : str, default ``"spatial"``
-        Key in ``adata.obsm`` containing the 2D spatial coordinates. Only
-        used when ``order_spots="spatial"``.
+    spatial_key : str
+        Key in adata.obsm containing spatial coordinates.
 
-    cmap : str, default ``"Reds"``
-        Colourmap for the heatmap.
+    cmap : str
+        Colormap used for heatmap. Diverging recommended due to z-scoring.
 
-    fontsize : int, default 8
+    fontsize : int
         Font size for labels and titles.
 
-    center : int, default 0
-        Value at which to centre the colourmap.
+    center : float
+        Center value for colormap scaling (typically 0 for z-scores).
 
-    batch_key : str or None, optional
-        Column in ``adata.obs`` identifying batches or libraries. When
-        provided, one subplot is generated per batch.
+    batch_key : str or None
+        Optional grouping variable for per-batch visualisation.
 
-    library_id : str, list of str, or None, optional
-        Specific library IDs to include. If ``None``, all batches are
-        shown.
+    library_id : str or list or None
+        Subset of batches to plot.
 
-    ncols : int, default 2
-        Number of subplot columns when ``batch_key`` is set.
+    ncols : int
+        Number of columns in multi-panel layout.
 
-    figsize : tuple, default (12, 6)
-        Figure size for the single-panel case. For multi-panel, the size
-        is computed automatically from the number of batches and ``ncols``.
+    figsize : tuple
+        Figure size per panel.
 
-    save : str or None, optional
-        Path to save the figure (e.g. ``"figures/heatmap.pdf"``).
+    save : str or None
+        File path to save output figure.
+
+    n_neighbors : int
+        Number of neighbours used in spatial graph construction.
 
     Returns
     -------
     None
-        Displays heatmaps and optionally saves the plot.
+        Displays heatmap figure.
 
-    Examples
-    --------
-    Default: clustered genes, spatially ordered spots:
-
-    >>> gene_contributions_heatmap(adata, score_key="EMT")
-
-    Mean-sorted genes, no spot reordering (original behaviour):
-
-    >>> gene_contributions_heatmap(
-    ...     adata, score_key="EMT",
-    ...     cluster_genes=False, order_spots=None,
-    ... )
-
-    Per-batch comparison with spot clustering:
-
-    >>> gene_contributions_heatmap(
-    ...     adata, score_key="EMT",
-    ...     batch_key="library_id",
-    ...     order_spots="cluster",
-    ... )
+    Notes
+    -----
+    - Expression values are z-scored per gene before plotting.
+    - Diverging colormap is meaningful only after scaling.
+    - Spatial coherence is computed using graph-weighted signal smoothing.
+    - Moran’s I is used to encode spatial autocorrelation at gene level.
     """
+
     if "gene_contributions" not in adata.uns:
         raise ValueError(
             "Gene contributions not found in adata.uns. "
@@ -152,107 +127,157 @@ def gene_contributions_heatmap(
 
     contribution_matrix = adata.uns["gene_contributions"][score_key]
 
-    # Helpers
-
-    def _select_top_genes(contributions, n):
-        """Select top genes by mean absolute contribution."""
+    def _select_extreme_genes(contributions, n_top, n_bottom):
         mean_abs = {
             gene: np.mean(np.abs(scores)) for gene, scores in contributions.items()
         }
-        return sorted(mean_abs, key=mean_abs.get, reverse=True)[:n]
+        sorted_genes = sorted(mean_abs, key=mean_abs.get, reverse=True)
+        top = sorted_genes[:n_top]
+        bottom = sorted_genes[-n_bottom:] if n_bottom > 0 else []
+        bottom = [g for g in bottom if g not in top]
+        return top + bottom, mean_abs
 
     def _cluster_order(matrix):
-        """Hierarchical clustering order for rows of a matrix."""
         if matrix.shape[0] < 2:
             return np.arange(matrix.shape[0])
         dist = pdist(matrix, metric="correlation")
-        # Guard against NaN distances (constant rows)
         dist = np.nan_to_num(dist, nan=0.0)
         Z = linkage(dist, method="average")
         return leaves_list(Z)
 
     def _spatial_order(coords):
-        """Order spots by first PC of spatial coordinates."""
-        if coords.shape[0] < 2:
+        if coords is None or coords.shape[0] < 2:
             return np.arange(coords.shape[0])
         pc1 = PCA(n_components=1).fit_transform(coords).ravel()
         return np.argsort(pc1)
 
-    def _build_heatmap(contributions, genes, spot_mask, coords=None):
+    def _scale_rows(X):
         """
-        Build the heatmap matrix with gene and spot ordering applied.
-
-        Returns the (n_genes, n_spots) matrix and the ordered gene labels.
+        Z-score per gene (row-wise scaling).
+        This is what makes RdBu_r meaningful.
         """
-        data = np.array([contributions[g] for g in genes])
+        mean = X.mean(axis=1, keepdims=True)
+        std = X.std(axis=1, keepdims=True)
+        std[std == 0] = 1.0
+        return (X - mean) / std
 
-        # Gene ordering
-        if cluster_genes:
-            gene_order = _cluster_order(data)
-        else:
-            gene_order = np.arange(len(genes))
-        ordered_genes = [genes[i] for i in gene_order]
-        data = data[gene_order]
+    def _compute_spot_coherence(data, coords):
+        """
+        Local spatial coherence via graph-weighted signal smoothness.
+        """
+        from scipy.sparse import csr_matrix
+        from anndata import AnnData as _AnnData
 
-        # Spot ordering
-        if order_spots == "spatial" and coords is not None:
-            spot_order = _spatial_order(
-                coords[spot_mask] if spot_mask is not None else coords
-            )
-            data = data[:, spot_order]
+        signal = np.mean(np.abs(data), axis=0)
+
+        if coords is None or len(signal) < 3:
+            return np.zeros_like(signal)
+
+        ad = _AnnData(X=np.zeros((coords.shape[0], 1)))
+        ad.obsm[spatial_key] = coords
+
+        sq.gr.spatial_neighbors(ad, coord_type="generic")
+        W = ad.obsp["spatial_connectivities"]
+
+        if not isinstance(W, csr_matrix):
+            W = csr_matrix(W)
+
+        row_sum = np.array(W.sum(axis=1)).flatten()
+        row_sum[row_sum == 0] = 1.0
+        W = W.multiply(1 / row_sum[:, None])
+
+        smoothed = W.dot(signal)
+        return smoothed
+
+    def _order_genes(contributions, genes, mean_abs, coords):
+        moran = _compute_gene_morans(contributions, genes, coords)
+        return sorted(
+            genes,
+            key=lambda g: (mean_abs[g], moran.get(g, 0.0)),
+            reverse=True,
+        )
+
+    def _compute_gene_morans(contributions, genes, coords):
+        from anndata import AnnData as _AnnData
+
+        X = np.array([contributions[g] for g in genes]).T
+        ad = _AnnData(X=X)
+        ad.obsm[spatial_key] = coords
+        ad.var_names = genes
+
+        sq.gr.spatial_neighbors(ad, coord_type="generic")
+        sq.gr.spatial_autocorr(ad, mode="moran")
+
+        return ad.uns["moranI"]["I"].to_dict()
+
+    def _order_spots(data, coords):
+        if order_spots == "spatial":
+            return _spatial_order(coords)
         elif order_spots == "cluster":
-            spot_order = _cluster_order(data.T)
-            data = data[:, spot_order]
+            return _cluster_order(data.T)
+        elif order_spots == "coherence":
+            score = _compute_spot_coherence(data, coords)
+            return np.argsort(score)[::-1]
+        return np.arange(data.shape[1])
 
-        return data, ordered_genes
+    def _build_heatmap(contributions, genes, mean_abs, coords):
+        ordered_genes = _order_genes(contributions, genes, mean_abs, coords)
+
+        X = np.array([contributions[g] for g in ordered_genes])
+
+        X = _scale_rows(X)
+
+        spot_order = _order_spots(X, coords)
+        X = X[:, spot_order]
+
+        return X, ordered_genes
 
     def _draw_heatmap(data, genes, ax, title):
-        """Render a single heatmap panel."""
+        vmax = np.nanpercentile(np.abs(data), 99)
+        vmin = -vmax
+
         sns.heatmap(
             data,
             yticklabels=genes,
             cmap=cmap,
             center=center,
-            annot=False,
+            vmin=vmin,
+            vmax=vmax,
             xticklabels=False,
             ax=ax,
         )
-        ax.set_xlabel("Spots", fontsize=fontsize)
-        ax.set_ylabel("Top contributing genes", fontsize=fontsize)
-        ax.tick_params(axis="both", labelsize=fontsize)
+        ax.set_xlabel("Spots (spatial coherence)", fontsize=fontsize)
+        ax.set_ylabel("Genes (z-scored)", fontsize=fontsize)
         ax.set_title(title, fontsize=fontsize)
+        ax.tick_params(labelsize=fontsize)
         ax.grid(False)
 
     # Single panel
-
     if batch_key is None:
-        genes = _select_top_genes(contribution_matrix, top_n_genes)
+        coords = adata.obsm.get(spatial_key)
+
+        genes, mean_abs = _select_extreme_genes(
+            contribution_matrix, top_n_genes, bottom_n_genes
+        )
+
         data, ordered_genes = _build_heatmap(
             contribution_matrix,
             genes,
-            spot_mask=None,
-            coords=adata.obsm.get(spatial_key),
+            mean_abs,
+            coords,
         )
 
         fig, ax = plt.subplots(figsize=figsize)
-        _draw_heatmap(data, ordered_genes, ax, title=score_key)
+        _draw_heatmap(data, ordered_genes, ax, score_key)
 
-    # Multi-panel by batch
-
+    # Multi-panel
     else:
         if batch_key not in adata.obs.columns:
-            raise ValueError(f"Batch key '{batch_key}' not found in adata.obs.")
+            raise ValueError(f"{batch_key} not found in adata.obs")
 
         if library_id is not None:
             if isinstance(library_id, str):
                 library_id = [library_id]
-            missing = [
-                lid for lid in library_id if lid not in adata.obs[batch_key].values
-            ]
-            if missing:
-                raise ValueError(
-                    f"Library IDs {missing} not found in adata.obs['{batch_key}']."
-                )
             unique_batches = library_id
         else:
             unique_batches = list(adata.obs[batch_key].unique())
@@ -269,35 +294,29 @@ def gene_contributions_heatmap(
         axes = np.atleast_2d(axes).flatten()
 
         for i, batch in enumerate(unique_batches):
-            batch_mask = (adata.obs[batch_key] == batch).values
+            mask = (adata.obs[batch_key] == batch).values
+            coords = adata.obsm[spatial_key][mask]
 
-            batch_contributions = {
-                gene: scores[batch_mask] for gene, scores in contribution_matrix.items()
-            }
+            batch_contributions = {g: v[mask] for g, v in contribution_matrix.items()}
 
-            genes = _select_top_genes(batch_contributions, top_n_genes)
+            genes, mean_abs = _select_extreme_genes(
+                batch_contributions, top_n_genes, bottom_n_genes
+            )
+
             data, ordered_genes = _build_heatmap(
                 batch_contributions,
                 genes,
-                spot_mask=batch_mask,
-                coords=adata.obsm.get(spatial_key),
+                mean_abs,
+                coords,
             )
 
-            _draw_heatmap(
-                data,
-                ordered_genes,
-                axes[i],
-                title=f"{score_key} ({batch})",
-            )
+            _draw_heatmap(data, ordered_genes, axes[i], f"{score_key} ({batch})")
 
         for j in range(n_batches, len(axes)):
             axes[j].axis("off")
 
-    # Save
-
     if save:
         os.makedirs(os.path.dirname(save) or "figures", exist_ok=True)
-        path = os.path.join("figures", save) if not os.path.dirname(save) else save
-        plt.savefig(path, dpi=300, bbox_inches="tight")
+        plt.savefig(save, dpi=300, bbox_inches="tight")
 
     plt.show()
