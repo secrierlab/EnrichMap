@@ -443,6 +443,8 @@ def _plot_variograms(
             color=colour,
             lw=1.2,
         )
+        ax0.set_box_aspect(1)
+        ax0.grid(False)
 
     for cat, col in pal.items():
         ax0.plot([], [], "-", color=col, lw=2, label=cat)
