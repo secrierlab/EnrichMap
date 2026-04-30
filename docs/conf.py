@@ -69,6 +69,9 @@ class _SmartMock(MagicMock):
     """Mock that preserves class names so Sphinx renders clean type hints."""
 
     def __getattr__(self, name):
+        # Let MagicMock handle its own internals to avoid recursion
+        if name.startswith("_mock_") or name.startswith("_spec_"):
+            return super().__getattr__(name)
         parent = self._mock_name or ""
         child = _SmartMock(name=f"{parent}.{name}" if parent else name)
         child.__name__ = name
@@ -77,7 +80,7 @@ class _SmartMock(MagicMock):
         return child
 
     def __repr__(self):
-        return getattr(self, "__name__", "Mock")
+        return self._mock_name.rsplit(".", 1)[-1] if self._mock_name else "Mock"
 
 
 for _mod in _MOCK_MODULES:
