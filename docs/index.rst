@@ -1,7 +1,7 @@
 Welcome to EnrichMap's documentation!
 =====================================
 
-**EnrichMap** is a lightweight tool designed to compute and visualise enrichment scores of a given gene set or signature in spatial transcriptomics datasets across different platforms. It offers flexible scoring, batch correction, spatial smoothing and visual outputs for intuitive exploration of biological signatures.
+**EnrichMap** performs gene set enrichment analysis on spatial transcriptomics data, with gene weight inference and geostatistical modelling of spatial structure. It enables pathway-level mapping and comparison of opposing programmes across platforms, with outputs designed for direct interpretation.
 
 .. image:: https://github.com/secrierlab/enrichmap/raw/main/img/enrichmap_workflow.jpg
    :alt: EnrichMap workflow
@@ -10,11 +10,14 @@ Welcome to EnrichMap's documentation!
 Features
 --------
 
-- Fast computation of enrichment scores
-- Support for batch correction and spatial covariates
-- Built-in spatial smoothing
-- Visualisation tools for intuitive mapping
-- Easy integration with AnnData (.h5ad) objects
+- Efficient computation of gene set enrichment scores in spatial data
+- Gene weight inference within pathways and across opposing programmes
+- Spatial smoothing and correction for spatial covariates
+- Optional batch correction (recommended mode) for multi-sample integration
+- Geostatistical diagnostics to quantify spatial structure
+- Compatibility with major platforms (e.g. Visium, Visium HD, Xenium, MERFISH, etc.)
+- Native support for AnnData (.h5ad) objects
+- Direct visualisation of spatial enrichment maps
 
 Documentation
 -------------
@@ -40,7 +43,8 @@ Celik C & Secrier M (2025). *EnrichMap: Spatially-informed enrichment analysis f
 Copyright
 ---------
 
-This code is free and is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY. See the GNU General Public License for more details.
+This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License](../LICENSE) as published by the Free Software Foundation, either version 3 of the License or any later version.
+This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**, without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 Contents
 --------

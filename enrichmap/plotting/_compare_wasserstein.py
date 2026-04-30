@@ -11,6 +11,8 @@ from tqdm import tqdm
 
 logging.getLogger("squidpy").setLevel(logging.WARNING)
 
+plt.rcParams["axes.grid"] = False
+
 
 def compare_wasserstein(
     adata: AnnData,
@@ -548,13 +550,14 @@ def _plot_wasserstein(
         figsize=figsize,
         row_colors=row_colors,
         col_colors=row_colors,
-        linewidths=0.3,
+        linewidths=0,
         xticklabels=True,
         yticklabels=True,
         cbar_kws={"label": "Wasserstein distance"},
     )
     g.ax_heatmap.set_xlabel("")
     g.ax_heatmap.set_ylabel("")
+    g.ax_heatmap.set_aspect("equal")
 
     title_parts = []
     if "pairwise_test" in dist_df.attrs:

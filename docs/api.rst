@@ -19,9 +19,8 @@ These functions are used by the ``score`` function.
    :nosignatures:
    :toctree: generated/
 
-   enrichmap.tl.generate_binary_labels
-   enrichmap.tl.cluster_gene_correlation
    enrichmap.tl.infer_gene_weights
+   enrichmap.tl.build_signed_weights
 
 
 Main plotting function
@@ -43,6 +42,9 @@ Functionalities to assess the smoothness of scores or input gene signature.
    :toctree: generated/
 
    enrichmap.pl.spatial_metrics
+   enrichmap.pl.compare_morans_i
+   enrichmap.pl.compare_wasserstein
+   enrichmap.pl.compare_variograms
    enrichmap.pl.variogram
    enrichmap.pl.variogram_all
    enrichmap.pl.morans_correlogram

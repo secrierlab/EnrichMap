@@ -486,6 +486,8 @@ def _plot_variograms(
         )
         ax.set_ylabel(ylabel)
         ax.set_xlabel("")
+        ax.grid(False)
+        ax.set_box_aspect(1)
         sns.despine(ax=ax)
 
     title_parts = []

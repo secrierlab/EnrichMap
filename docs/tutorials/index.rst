@@ -7,3 +7,5 @@ Tutorials
    
    one_sample
    multiple_samples
+   gene_weights
+   opposing_programmes

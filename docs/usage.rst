@@ -14,11 +14,9 @@ Basic tutorial
 
    # Run scoring
    em.tl.score(
-       adata=adata,
+       adata,
        gene_list=gene_set,
        score_key="T_cell_signature",
-       smoothing=True,  # by default
-       correct_spatial_covariates=True,  # by default
        batch_key=None  # Set batch_key if working with multiple slides
    )
 
