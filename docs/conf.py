@@ -1,91 +1,103 @@
 """Configuration for EnrichMap's Sphinx documentation."""
 
 from __future__ import annotations
-from pathlib import Path
-from functools import partial
-from docutils import nodes
-from typing import TYPE_CHECKING
-
-HERE = Path(__file__).parent
 
 import os
 import sys
+from functools import partial
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
+
+from docutils import nodes
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
 
 sys.path.insert(0, os.path.abspath(".."))
 
-# Mock heavy/broken dependencies before importing enrichmap so that:
-# 1. enrichmap can be imported successfully (registering enrichmap.pl / enrichmap.tl)
-# 2. xarray_schema's broken `from pkg_resources import ...` never executes
+
 _MOCK_MODULES = [
+    # scverse ecosystem
+    "anndata",
+    "scanpy",
     "squidpy",
     "squidpy.pl",
     "squidpy.pl._spatial_utils",
     "spatialdata",
     "spatialdata._logging",
-    "xarray_schema",
-    "anndata",
-    "scanpy",
+    # numerics
     "numpy",
+    "pandas",
     "scipy",
+    "scipy.cluster",
+    "scipy.cluster.hierarchy",
     "scipy.sparse",
     "scipy.spatial",
     "scipy.spatial.distance",
-    "scipy.cluster",
-    "scipy.cluster.hierarchy",
     "scipy.stats",
-    "pandas",
+    # plotting
     "matplotlib",
-    "matplotlib.pyplot",
-    "matplotlib.gridspec",
-    "matplotlib.colors",
-    "matplotlib.patches",
     "matplotlib.cm",
+    "matplotlib.colors",
+    "matplotlib.gridspec",
+    "matplotlib.patches",
+    "matplotlib.pyplot",
     "mpl_toolkits",
     "mpl_toolkits.axes_grid1",
     "seaborn",
+    "adjustText",
+    # ML / stats
     "sklearn",
     "sklearn.decomposition",
     "sklearn.metrics",
-    "tqdm",
     "pygam",
+    # spatial statistics
     "libpysal",
     "libpysal.weights",
     "libpysal.weights.spatial_lag",
     "esda",
-    "esda.moran",
     "esda.geary",
     "esda.getisord",
-    "splot",
-    "splot.esda",
+    "esda.moran",
     "skgstat",
-    "adjustText",
+    # misc
+    "tqdm",
 ]
+
+
+class _SmartMock(MagicMock):
+    """Mock that preserves class names so Sphinx renders clean type hints."""
+
+    def __getattr__(self, name):
+        parent = self._mock_name or ""
+        child = _SmartMock(name=f"{parent}.{name}" if parent else name)
+        child.__name__ = name
+        child.__qualname__ = name
+        child.__module__ = parent
+        return child
+
+    def __repr__(self):
+        return getattr(self, "__name__", "Mock")
+
+
 for _mod in _MOCK_MODULES:
-    sys.modules[_mod] = MagicMock()
+    sys.modules[_mod] = _SmartMock(name=_mod)
 
-import enrichmap  # noqa: E402  — must come after mocks
+import enrichmap
 
-if TYPE_CHECKING:
-    from sphinx.application import Sphinx
-
-# -- Project information
 project = "EnrichMap"
-copyright = "2026, Cenk Celik"
+copyright = "2026, Cenk Celik"  # noqa: A001
 author = "Cenk Celik"
-
 release = enrichmap.__version__
 version = ".".join(release.split(".")[:2])
-
 master_doc = "index"
 
-# -- General configuration
+# General configuration
 
 extensions = [
-    "sphinx.ext.duration",
-    "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.duration",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "myst_nb",
@@ -107,40 +119,23 @@ intersphinx_mapping = {
 }
 intersphinx_disabled_domains = ["std"]
 
-# -- Options for EPUB output
+# Autodoc
 
-epub_show_urls = "footnote"
-
-# Generate the API documentation when building
 autosummary_generate = True
 autodoc_member_order = "bysource"
-autodoc_mock_imports = [
-    "squidpy",
-    "spatialdata",
-    "xarray_schema",
-    "anndata",
-    "scanpy",
-    "numpy",
-    "scipy",
-    "pandas",
-    "matplotlib",
-    "seaborn",
-    "sklearn",
-    "tqdm",
-    "pygam",
-    "libpysal",
-    "esda",
-    "splot",
-    "skgstat",
-    "adjustText",
-]
 
-# -- Options for HTML output ----------------------------------------------
+# Use the same list for autodoc_mock_imports (top-level packages only)
+autodoc_mock_imports = sorted({mod.split(".")[0] for mod in _MOCK_MODULES})
+
+# HTML output
+
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 html_logo = "_static/logo-light.svg"
+html_favicon = "_static/favicon.png"
+html_title = "EnrichMap"
+html_show_sphinx = False
 
-# Use light and dark logos for sphinx-book-theme
 html_theme_options = {
     "repository_url": "https://github.com/secrierlab/enrichmap",
     "use_repository_button": True,
@@ -148,31 +143,19 @@ html_theme_options = {
     "logo": {"image_dark": "_static/logo-dark.svg"},
 }
 
-html_show_sphinx = False
-html_title = "EnrichMap"
-html_favicon = "_static/favicon.png"
+# Other output formats
+
+epub_show_urls = "footnote"
+htmlhelp_basename = f"{project}doc"
+
+_doc_title = f"{project} Documentation"
+latex_documents = [(master_doc, f"{project}.tex", _doc_title, author, "manual")]
+man_pages = [(master_doc, project, _doc_title, [author], 1)]
+
+# App setup
 
 
 def setup(app: Sphinx):
-    """App setup hook."""
+    """Register custom roles."""
     app.add_generic_role("small", partial(nodes.inline, classes=["small"]))
     app.add_generic_role("smaller", partial(nodes.inline, classes=["smaller"]))
-
-
-# -- Options for other output formats ------------------------------------------
-
-htmlhelp_basename = f"{project}doc"
-doc_title = f"{project} Documentation"
-latex_documents = [(master_doc, f"{project}.tex", doc_title, author, "manual")]
-man_pages = [(master_doc, project, doc_title, [author], 1)]
-texinfo_documents = [
-    (
-        master_doc,
-        project,
-        doc_title,
-        author,
-        project,
-        "One line description of project.",
-        "Miscellaneous",
-    )
-]
