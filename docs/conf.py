@@ -39,6 +39,8 @@ _MOCK_MODULES = [
     "matplotlib.pyplot",
     "matplotlib.gridspec",
     "matplotlib.colors",
+    "matplotlib.patches",
+    "matplotlib.cm",
     "mpl_toolkits",
     "mpl_toolkits.axes_grid1",
     "seaborn",
