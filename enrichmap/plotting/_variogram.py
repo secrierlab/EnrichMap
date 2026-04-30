@@ -12,21 +12,22 @@ from skgstat import Variogram
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
+
 def variogram(
     adata: AnnData,
-    score_keys: List[str],
+    score_key: List[str],
     save: None | str = None,
     max_lag: float | None = None,
-    lag_percentile: float = 95
+    lag_percentile: float = 95,
 ) -> None:
     """
     Compute empirical variograms to assess spatial dependence for any score key.
-    
+
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix with spatial coordinates in `adata.obsm["spatial"]`.
-    score_keys : list of str
+    score_key : list of str
         List of keys in `adata.obs` to compute variograms for.
     save : str or None, optional
         If provided, path to save the figure as a PDF file.
@@ -35,7 +36,7 @@ def variogram(
         If None, computed from pairwise distances using `lag_percentile`.
     lag_percentile : float, optional
         Percentile of pairwise distances to set as max_lag when max_lag is None (default: 95).
-    
+
     Returns
     -------
     variograms : list of Variogram
@@ -47,13 +48,13 @@ def variogram(
         dists = pdist(coords)
         max_lag = np.percentile(dists, lag_percentile)
 
-    n = len(score_keys)
+    n = len(score_key)
     fig, axes = plt.subplots(1, n, figsize=(4 * n, 4), constrained_layout=True)
     if n == 1:
         axes = [axes]
 
     variograms = []
-    for ax, key in zip(axes, score_keys):
+    for ax, key in zip(axes, score_key):
         values = adata.obs[key].values
         V = Variogram(coords, values, method="cressie", model="gaussian", verbose=True)
         variograms.append(V)
@@ -66,7 +67,6 @@ def variogram(
         ax.legend()
         ax.grid(False)
         ax.set_xlim(0, max_lag)
-
 
     if save:
         # Ensure 'figures/' directory exists

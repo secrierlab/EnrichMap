@@ -11,12 +11,13 @@ from skgstat import Variogram
 
 plt.rcParams["pdf.fonttype"] = "truetype"
 
+
 def variogram_all(
     adata: AnnData,
-    score_keys: List[str],
+    score_key: List[str],
     save: None | str = None,
     max_lag: float | None = None,
-    lag_percentile: float = 95
+    lag_percentile: float = 95,
 ) -> None:
     """
     Compute and plot empirical variograms for multiple score keys on the same plot.
@@ -25,7 +26,7 @@ def variogram_all(
     ----------
     adata : AnnData
         Annotated data matrix with spatial coordinates in `adata.obsm["spatial"]`.
-    score_keys : list of str
+    score_key : list of str
         List of keys in `adata.obs` to compute variograms for.
     save : str or None, optional
         If provided, path to save the figure as a PDF file.
@@ -43,10 +44,10 @@ def variogram_all(
 
     fig, ax = plt.subplots(figsize=(4, 4), constrained_layout=True)
 
-    colours = plt.cm.tab10(np.linspace(0, 1, len(score_keys)))
+    colours = plt.cm.tab10(np.linspace(0, 1, len(score_key)))
     variograms = []
 
-    for key, colour in zip(score_keys, colours):
+    for key, colour in zip(score_key, colours):
         values = adata.obs[key].values
         V = Variogram(coords, values, method="cressie", model="gaussian", verbose=False)
         variograms.append(V)
