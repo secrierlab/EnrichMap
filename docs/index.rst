@@ -43,7 +43,7 @@ Celik C & Secrier M (2025). *EnrichMap: Spatially-informed enrichment analysis f
 Copyright
 ---------
 
-This program is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License](../LICENSE) as published by the Free Software Foundation, either version 3 of the License or any later version.
+This program is free software: you can redistribute it and/or modify it under the terms of the `GNU General Public License <https://github.com/secrierlab/EnrichMap/blob/main/LICENSE>`_ as published by the Free Software Foundation, either version 3 of the License or any later version.
 This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**, without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 Contents
