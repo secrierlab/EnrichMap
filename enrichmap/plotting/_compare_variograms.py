@@ -4,7 +4,7 @@ from ._compare_morans_i import _group_permutation_test
 import logging
 import warnings
 from typing import Literal
-
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ from anndata import AnnData
 from tqdm import tqdm
 
 logging.getLogger("squidpy").setLevel(logging.WARNING)
+
+plt.rcParams["axes.grid"] = False
 
 
 def compare_variograms(
@@ -30,6 +32,8 @@ def compare_variograms(
     plot: bool = True,
     figsize: tuple[float, float] = (10, 4),
     palette: str | dict | None = None,
+    save: str | None = None,
+    save_kwargs: dict | None = None,
 ) -> pd.DataFrame:
     """
     Fit empirical semivariograms to EnrichMap scores per patient and extract
@@ -337,6 +341,8 @@ def compare_variograms(
             group_col="group" if "group" in result.columns else None,
             figsize=figsize,
             palette=palette,
+            save=save,
+            save_kwargs=save_kwargs,
         )
 
     return result
@@ -348,6 +354,8 @@ def _plot_variograms(
     group_col: str | None = None,
     figsize: tuple[float, float] = (10, 4),
     palette: str | dict | None = None,
+    save: str | None = None,
+    save_kwargs: dict | None = None,
 ) -> tuple[plt.Figure, np.ndarray]:
     """
     Three-panel figure summarising variogram comparison results.
@@ -503,4 +511,12 @@ def _plot_variograms(
         fig.suptitle("  |  ".join(title_parts), fontsize=9, y=1.02)
 
     plt.tight_layout()
+    if save is not None:
+        if save_kwargs is None:
+            save_kwargs = {}
+
+        save_path = Path("figures") / save
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        fig.savefig(save_path, **save_kwargs)
     return fig, axes

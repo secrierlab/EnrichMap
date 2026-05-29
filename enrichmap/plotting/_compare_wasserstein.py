@@ -8,6 +8,7 @@ import pandas as pd
 import seaborn as sns
 from anndata import AnnData
 from tqdm import tqdm
+from pathlib import Path
 
 logging.getLogger("squidpy").setLevel(logging.WARNING)
 
@@ -29,6 +30,8 @@ def compare_wasserstein(
     figsize: tuple[float, float] = (7, 6),
     cmap: str = "magma_r",
     linkage_method: str = "average",
+    save: str | None = None,
+    save_kwargs: dict | None = None,
 ) -> pd.DataFrame:
     """
     Pairwise Wasserstein (earth mover's) distance between patients based on
@@ -311,6 +314,8 @@ def compare_wasserstein(
             figsize=figsize,
             cmap=cmap,
             linkage_method=linkage_method,
+            save=save,
+            save_kwargs=save_kwargs,
         )
 
     return result
@@ -479,6 +484,8 @@ def _plot_wasserstein(
     figsize: tuple[float, float] = (6, 6),
     cmap: str = "magma_r",
     linkage_method: str = "average",
+    save: str | None = None,
+    save_kwargs: dict | None = None,
 ) -> sns.matrix.ClusterGrid:
     """
     Hierarchically clustered heatmap of the pairwise Wasserstein distance
@@ -572,4 +579,12 @@ def _plot_wasserstein(
         g.figure.suptitle("  |  ".join(title_parts), fontsize=9, y=1.02)
 
     plt.tight_layout()
+    if save is not None:
+        if save_kwargs is None:
+            save_kwargs = {}
+
+        save_path = Path("figures") / save
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        fig.savefig(save_path, **save_kwargs)
     return g

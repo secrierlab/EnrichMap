@@ -9,8 +9,11 @@ import squidpy as sq
 import seaborn as sns
 from anndata import AnnData
 from tqdm import tqdm
+from pathlib import Path
 
 logging.getLogger("squidpy").setLevel(logging.WARNING)
+
+plt.rcParams["axes.grid"] = False
 
 
 def compare_morans_i(
@@ -25,6 +28,8 @@ def compare_morans_i(
     figsize: tuple[float, float] = (5, 4),
     palette: str | dict | None = None,
     ax: plt.Axes | None = None,
+    save: str | None = None,
+    save_kwargs: dict | None = None,
 ) -> pd.DataFrame:
     """
     Compare spatial autocorrelation of EnrichMap scores across patients
@@ -293,6 +298,8 @@ def compare_morans_i(
             figsize=figsize,
             palette=palette,
             ax=ax,
+            save=save,
+            save_kwargs=save_kwargs,
         )
 
     return result
@@ -477,6 +484,8 @@ def _plot_morans_i(
     figsize: tuple[float, float] = (5, 4),
     palette: str | dict | None = None,
     ax: plt.Axes | None = None,
+    save: str | None = None,
+    save_kwargs: dict | None = None,
 ) -> plt.Axes:
     """
     Strip-over-boxplot of permutation z-scored Moran's I values.
@@ -569,4 +578,12 @@ def _plot_morans_i(
 
     sns.despine(ax=ax)
     plt.tight_layout()
+    if save is not None:
+        if save_kwargs is None:
+            save_kwargs = {}
+
+        save_path = Path("figures") / save
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        fig.savefig(save_path, **save_kwargs)
     return ax
