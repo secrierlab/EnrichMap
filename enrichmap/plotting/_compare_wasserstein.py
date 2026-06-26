@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import logging
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from anndata import AnnData
-from tqdm import tqdm
 from pathlib import Path
+from scipy.cluster.hierarchy import dendrogram as _dendrogram
+from scipy.cluster.hierarchy import leaves_list, linkage
+from tqdm import tqdm
 
 logging.getLogger("squidpy").setLevel(logging.WARNING)
 
@@ -28,11 +31,12 @@ def compare_wasserstein(
     group_key: str | None = None,
     plot: bool = True,
     figsize: tuple[float, float] = (7, 6),
-    cmap: str = "magma_r",
+    cmap: str = "magma",
     linkage_method: str = "average",
     save: str | None = None,
     save_kwargs: dict | None = None,
-) -> pd.DataFrame:
+    return_result: bool = False,
+) -> pd.DataFrame | None:
     """
     Pairwise Wasserstein (earth mover's) distance between patients based on
     spatially embedded EnrichMap scores.
@@ -136,9 +140,9 @@ def compare_wasserstein(
     group_key : str or None, optional
         Column name in ``adata.obs`` for a higher-level clinical grouping,
         e.g. ``"subtype"``, ``"treatment_arm"`` or ``"response"``. When
-        provided, the clustermap is annotated with a colour sidebar and
-        a PERMANOVA test is run on the distance matrix. When ``None``,
-        no group-level testing is performed.
+        provided, the heatmap is annotated with colour strips and a PERMANOVA
+        test is run on the distance matrix. When ``None``, no group-level
+        testing is performed.
 
     plot : bool, default True
         Whether to produce a hierarchically clustered heatmap of the
@@ -146,23 +150,37 @@ def compare_wasserstein(
         informative; consider setting ``plot=False``.
 
     figsize : tuple of float, default (7, 6)
-        Figure size in inches (width, height) for the clustermap.
+        Controls the figure width in inches. The height is auto-computed
+        from the width so that heatmap cells are exactly square; the
+        height component of this tuple is therefore ignored.
 
-    cmap : str, default ``"magma_r"``
-        Colourmap for the distance heatmap. ``"magma_r"`` gives a dark
-        (low distance) to light (high distance) gradient.
+    cmap : str, default ``"magma"``
+        Colourmap for the distance heatmap.
 
     linkage_method : str, default ``"average"``
         Linkage method for hierarchical clustering of the distance matrix.
         ``"average"`` (UPGMA) is the standard choice for distance matrices.
         Other options include ``"ward"``, ``"complete"`` and ``"single"``.
 
+    save : str or None, optional
+        Filename to save the figure (e.g. ``"wasserstein.pdf"``). The file
+        is written to a ``figures/`` subdirectory of the working directory.
+        When ``None`` (default), the figure is not saved.
+
+    save_kwargs : dict or None, optional
+        Extra keyword arguments forwarded to ``fig.savefig``, e.g.
+        ``{"dpi": 300, "bbox_inches": "tight"}``.
+
+    return_result : bool, default False
+        When ``True``, return the distance matrix DataFrame. When ``False``
+        (default), return ``None``.
+
     Returns
     -------
-    pd.DataFrame
-        Square distance matrix indexed and columned by patient name.
-        Values are Wasserstein-2 distances in the joint
-        (x_norm, y_norm, score_norm) space.
+    pd.DataFrame or None
+        When ``return_result=True``: square distance matrix indexed and
+        columned by patient name. Values are Wasserstein-2 distances in
+        the joint (x_norm, y_norm, score_norm) space.
 
         Statistical test results, when applicable, are stored as
         dictionaries in ``df.attrs``:
@@ -318,7 +336,9 @@ def compare_wasserstein(
             save_kwargs=save_kwargs,
         )
 
-    return result
+    if return_result:
+        return result
+    return None
 
 
 def _pairwise_permutation_wasserstein(
@@ -486,86 +506,181 @@ def _plot_wasserstein(
     linkage_method: str = "average",
     save: str | None = None,
     save_kwargs: dict | None = None,
-) -> sns.matrix.ClusterGrid:
+) -> plt.Figure:
     """
     Hierarchically clustered heatmap of the pairwise Wasserstein distance
     matrix.
 
-    Produces a ``seaborn.clustermap`` with dendrograms on both axes. When
-    ``group_key`` is provided, a colour sidebar is added to annotate each
-    patient's clinical group, making it easy to assess whether the
-    hierarchical clustering recovers the expected grouping.
+    Rows and columns are reordered by hierarchical clustering (UPGMA by
+    default). Dendrograms are drawn using ``no_plot=True`` so their
+    coordinates can be rescaled to ``[0, n]`` before the axes are shared
+    with the heatmap via ``sharex`` / ``sharey``, guaranteeing pixel-perfect
+    alignment regardless of ``tight_layout``.
 
-    Statistical test results stored in ``dist_df.attrs`` (spot-label
-    permutation p-value and/or PERMANOVA pseudo-F and p-value) are
-    displayed in the figure title when present.
+    Row labels are placed on the right-hand side of the heatmap since the
+    left side is occupied by the dendrogram.
 
     Parameters
     ----------
     dist_df : pd.DataFrame
-        Square distance matrix indexed by patient name, as returned by
-        :func:`compare_wasserstein`. May carry ``dist_df.attrs["pairwise_test"]``
-        and/or ``dist_df.attrs["permanova"]`` dictionaries.
-
+        Square distance matrix indexed by patient name.
     adata : AnnData or None
-        Original annotated data matrix. Only needed when ``group_key`` is
-        set, to look up each patient's group label.
-
+        Needed only when ``group_key`` is set.
     batch_key : str or None
-        Column in ``adata.obs`` identifying patients. Required when
-        ``group_key`` is set.
-
+        Column in ``adata.obs`` identifying patients.
     group_key : str or None
-        Column in ``adata.obs`` for group annotation. When provided, a
-        colour sidebar is drawn alongside the heatmap indicating each
-        patient's group membership.
-
+        Column in ``adata.obs`` for group annotation colour strips.
     figsize : tuple of float, default (6, 6)
-        Figure size in inches.
-
     cmap : str, default ``"magma_r"``
-        Colourmap for the heatmap.
-
     linkage_method : str, default ``"average"``
-        Linkage method for hierarchical clustering. ``"average"`` (UPGMA)
-        is the standard choice for distance matrices.
 
     Returns
     -------
-    seaborn.matrix.ClusterGrid
-        The clustermap object, which provides access to the figure
-        (``g.figure``) and individual axes (``g.ax_heatmap``,
-        ``g.ax_row_dendrogram``, etc.).
+    matplotlib.figure.Figure
     """
-    row_colors = None
+    n = len(dist_df)
+    labels = list(dist_df.index)
+
+    # --- hierarchical clustering ---
+    condensed = dist_df.values[np.triu_indices(n, k=1)]
+    Z = linkage(condensed, method=linkage_method)
+    order = leaves_list(Z)
+    ordered_labels = [labels[i] for i in order]
+    mat = dist_df.iloc[order].iloc[:, order]
+
+    # Compute dendrogram data once (no_plot=True) in default orientation='top'.
+    # scipy places leaf i at x = 10*i + 5, so dividing by 10 maps leaves to
+    # [0.5, 1.5, …, n-0.5] — exactly the cell centres of the heatmap.
+    # Heights (dcoord) are used as-is for the top dendrogram (y growing up)
+    # and negated for the left dendrogram (x growing left).
+    ddata = _dendrogram(Z, no_plot=True, color_threshold=0)
+    max_h = max(max(ys) for ys in ddata["dcoord"])
+
+    # --- group colour strips ---
+    group_colors: list | None = None
+    legend_handles: list = []
     if group_key is not None and adata is not None and batch_key is not None:
         if group_key in adata.obs.columns:
             sample_groups = (
-                adata.obs.groupby(batch_key)[group_key].first().reindex(dist_df.index)
+                adata.obs.groupby(batch_key)[group_key]
+                .first()
+                .reindex(dist_df.index)
             )
-            unique_groups = sample_groups.unique()
+            unique_groups = sorted(sample_groups.dropna().unique())
             pal = dict(
                 zip(unique_groups, sns.color_palette("Set2", len(unique_groups)))
             )
-            row_colors = sample_groups.map(pal)
-            row_colors.name = group_key
+            group_colors = [pal[sample_groups[s]] for s in ordered_labels]
+            legend_handles = [
+                mpatches.Patch(color=c, label=g) for g, c in pal.items()
+            ]
 
-    g = sns.clustermap(
-        dist_df,
-        method=linkage_method,
+    has_groups = group_colors is not None
+
+    # --- GridSpec layout (sizes in inches) ---
+    # figsize[0] sets the figure width; height is AUTO-COMPUTED so that the
+    # heatmap cells are exactly square (hm_size × hm_size).
+    DEND = 0.7    # dendrogram thickness
+    STRIP = 0.12  # colour strip thickness
+    GAP = 0.45    # gap between heatmap right edge and colorbar (holds row labels)
+    CBAR = 0.25   # colour bar width
+
+    fig_w = figsize[0]
+    strip = STRIP if has_groups else 0.0
+
+    # heatmap occupies a square block; compute from available width
+    hm_size = fig_w - DEND - strip - GAP - CBAR
+    fig_h = hm_size + DEND + strip   # height auto-set to match
+
+    # cols:  left_dend | [left_strip] | heatmap | gap | cbar
+    col_widths = [DEND] + ([strip] if has_groups else []) + [hm_size, GAP, CBAR]
+
+    # rows:  top_dend | [top_strip] | heatmap
+    row_heights = [DEND] + ([strip] if has_groups else []) + [hm_size]
+
+    hm_row = len(row_heights) - 1
+    hm_col = len(col_widths) - 3   # before gap and cbar
+    cbar_col = len(col_widths) - 1  # last column
+
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    gs = fig.add_gridspec(
+        len(row_heights),
+        len(col_widths),
+        width_ratios=col_widths,
+        height_ratios=row_heights,
+        hspace=0.01,
+        wspace=0.01,
+    )
+
+    # --- heatmap (created first so dendrograms can share its axes) ---
+    ax_hm = fig.add_subplot(gs[hm_row, hm_col])
+    ax_cbar = fig.add_subplot(gs[hm_row, cbar_col])
+
+    sns.heatmap(
+        mat,
+        ax=ax_hm,
         cmap=cmap,
-        figsize=figsize,
-        row_colors=row_colors,
-        col_colors=row_colors,
+        xticklabels=ordered_labels,
+        yticklabels=ordered_labels,
         linewidths=0,
-        xticklabels=True,
-        yticklabels=True,
+        cbar=True,
+        cbar_ax=ax_cbar,
         cbar_kws={"label": "Wasserstein distance"},
     )
-    g.ax_heatmap.set_xlabel("")
-    g.ax_heatmap.set_ylabel("")
-    g.ax_heatmap.set_aspect("equal")
+    ax_hm.set_xlabel("")
+    ax_hm.set_ylabel("")
+    ax_hm.grid(False)
+    ax_hm.tick_params(axis="x", rotation=90)
+    ax_hm.yaxis.tick_right()
+    ax_hm.tick_params(axis="y", rotation=0)
 
+    # --- top dendrogram — shares x with heatmap ---
+    # x: leaf i → i+0.5 (via /10); y: heights growing upward
+    ax_top = fig.add_subplot(gs[0, hm_col], sharex=ax_hm)
+    for xs, ys in zip(ddata["icoord"], ddata["dcoord"]):
+        ax_top.plot([x / 10 for x in xs], ys, color="#888888", lw=0.8)
+    ax_top.set_ylim(0, max_h * 1.05)
+    ax_top.axis("off")
+
+    # --- left dendrogram — shares y with heatmap ---
+    # The heatmap y-axis is inverted (row 0 at top, y=0..n with y=0 at top).
+    # icoord leaf positions /10 give y = i+0.5, matching heatmap row i.
+    # Heights become negative x so the dendrogram grows leftward.
+    ax_left = fig.add_subplot(gs[hm_row, 0], sharey=ax_hm)
+    for xs, ys in zip(ddata["icoord"], ddata["dcoord"]):
+        ax_left.plot([-y for y in ys], [x / 10 for x in xs], color="#888888", lw=0.8)
+    ax_left.set_xlim(-max_h * 1.05, 0)
+    ax_left.axis("off")
+
+    # --- colour strips (share axes with heatmap for automatic alignment) ---
+    if has_groups:
+        strip_row = 1
+        strip_col_idx = 1
+
+        ax_ts = fig.add_subplot(gs[strip_row, hm_col], sharex=ax_hm)
+        for i, color in enumerate(group_colors):
+            ax_ts.add_patch(plt.Rectangle((i, 0), 1, 1, color=color, linewidth=0))
+        ax_ts.set_ylim(0, 1)
+        ax_ts.axis("off")
+
+        ax_ls = fig.add_subplot(gs[hm_row, strip_col_idx], sharey=ax_hm)
+        for i, color in enumerate(group_colors):
+            ax_ls.add_patch(plt.Rectangle((0, i), 1, 1, color=color, linewidth=0))
+        ax_ls.set_xlim(0, 1)
+        ax_ls.axis("off")
+
+    # --- group legend ---
+    if legend_handles:
+        ax_hm.legend(
+            handles=legend_handles,
+            title=group_key,
+            bbox_to_anchor=(1.05, 1),
+            loc="upper left",
+            borderaxespad=0,
+            frameon=False,
+        )
+
+    # --- title ---
     title_parts = []
     if "pairwise_test" in dist_df.attrs:
         p = dist_df.attrs["pairwise_test"]["p_value"]
@@ -576,15 +691,15 @@ def _plot_wasserstein(
             f"PERMANOVA F = {res['pseudo_F']:.2f}, p = {res['p_value']:.4f}"
         )
     if title_parts:
-        g.figure.suptitle("  |  ".join(title_parts), fontsize=9, y=1.02)
+        fig.suptitle("  |  ".join(title_parts), fontsize=9, y=1.01)
 
     plt.tight_layout()
+
     if save is not None:
         if save_kwargs is None:
             save_kwargs = {}
-
         save_path = Path("figures") / save
         save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, **save_kwargs)
 
-        g.figure.savefig(save_path, **save_kwargs)
-    return g
+    return fig

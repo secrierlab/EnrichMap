@@ -30,7 +30,8 @@ def compare_morans_i(
     ax: plt.Axes | None = None,
     save: str | None = None,
     save_kwargs: dict | None = None,
-) -> pd.DataFrame:
+    return_result: bool = False,
+) -> pd.DataFrame | None:
     """
     Compare spatial autocorrelation of EnrichMap scores across patients
     using permutation-standardised Moran's I.
@@ -137,10 +138,23 @@ def compare_morans_i(
         and the plot is drawn on the given axes, which is useful for
         embedding in multi-panel figures.
 
+    save : str or None, optional
+        Filename to save the figure (e.g. ``"morans_i.pdf"``). The file is
+        written to a ``figures/`` subdirectory of the working directory.
+        When ``None`` (default), the figure is not saved.
+
+    save_kwargs : dict or None, optional
+        Extra keyword arguments forwarded to ``fig.savefig``, e.g.
+        ``{"dpi": 300, "bbox_inches": "tight"}``.
+
+    return_result : bool, default False
+        When ``True``, return the results DataFrame. When ``False``
+        (default), return ``None``.
+
     Returns
     -------
-    pd.DataFrame
-        One row per patient with columns:
+    pd.DataFrame or None
+        When ``return_result=True``: one row per patient with columns:
 
         - ``patient``: patient/sample identifier (from ``batch_key``).
         - ``group``: clinical group label (only if ``group_key`` is set).
@@ -302,7 +316,9 @@ def compare_morans_i(
             save_kwargs=save_kwargs,
         )
 
-    return result
+    if return_result:
+        return result
+    return None
 
 
 def _pairwise_permutation_morans(
@@ -568,7 +584,7 @@ def _plot_morans_i(
     ax.set_ylabel("Moran's I  (permutation z-score)")
     ax.set_xlabel("")
     ax.axhline(0, ls="--", c="grey", lw=0.8)
-
+    ax.set_box_aspect(1)
     if "pairwise_test" in df.attrs:
         p = df.attrs["pairwise_test"]["p_value"]
         ax.set_title(f"Spot-label permutation p = {p:.4f}", fontsize=9)

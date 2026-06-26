@@ -34,7 +34,8 @@ def compare_variograms(
     palette: str | dict | None = None,
     save: str | None = None,
     save_kwargs: dict | None = None,
-) -> pd.DataFrame:
+    return_result: bool = False,
+) -> pd.DataFrame | None:
     """
     Fit empirical semivariograms to EnrichMap scores per patient and extract
     structural parameters for cross-patient comparison of spatial organisation.
@@ -153,10 +154,23 @@ def compare_variograms(
         ``"Set2"``), a dictionary mapping group/patient names to colours,
         or ``None`` for the default palette.
 
+    save : str or None, optional
+        Filename to save the figure (e.g. ``"variograms.pdf"``). The file
+        is written to a ``figures/`` subdirectory of the working directory.
+        When ``None`` (default), the figure is not saved.
+
+    save_kwargs : dict or None, optional
+        Extra keyword arguments forwarded to ``fig.savefig``, e.g.
+        ``{"dpi": 300, "bbox_inches": "tight"}``.
+
+    return_result : bool, default False
+        When ``True``, return the results DataFrame. When ``False``
+        (default), return ``None``.
+
     Returns
     -------
-    pd.DataFrame
-        One row per patient with columns:
+    pd.DataFrame or None
+        When ``return_result=True``: one row per patient with columns:
 
         - ``patient``: patient/sample identifier (from ``batch_key``).
         - ``group``: clinical group label (only if ``group_key`` is set).
@@ -345,7 +359,9 @@ def compare_variograms(
             save_kwargs=save_kwargs,
         )
 
-    return result
+    if return_result:
+        return result
+    return None
 
 
 def _plot_variograms(
