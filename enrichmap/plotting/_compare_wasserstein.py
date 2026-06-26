@@ -586,5 +586,5 @@ def _plot_wasserstein(
         save_path = Path("figures") / save
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
-        fig.savefig(save_path, **save_kwargs)
+        g.figure.savefig(save_path, **save_kwargs)
     return g

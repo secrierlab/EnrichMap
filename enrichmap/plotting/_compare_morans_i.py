@@ -585,5 +585,5 @@ def _plot_morans_i(
         save_path = Path("figures") / save
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
-        fig.savefig(save_path, **save_kwargs)
+        ax.figure.savefig(save_path, **save_kwargs)
     return ax

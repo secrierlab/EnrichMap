@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "enrichmap"
-version = "0.2.3"
+version = "0.2.4"
 description = "EnrichMap: Spatially informed enrichment analysis for functional interpretation of spatial transcriptomics"
 authors = [
     { name = "C. Celik", email = "cenk.celik@proton.me" }
@@ -43,7 +43,6 @@ Homepage = "https://github.com/secrierlab/enrichmap"
 Issues = "https://github.com/secrierlab/EnrichMap/issues"
 Source = "https://github.com/secrierlab/enrichmap"
 Bluesky = "https://bsky.app/profile/cenkcelik.bsky.social"
-Twitter = "https://x.com/_cenk"
 
 [tool.hatch.version]
 source = "vcs"
