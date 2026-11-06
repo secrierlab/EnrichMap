@@ -465,6 +465,9 @@ def gene_contributions_heatmap(
 
         ax_heat.tick_params(labelsize=fontsize)
 
+        # seaborn only turns gene names horizontal if they overlap at the font size in force when it draws them
+        ax_heat.tick_params(axis="y", labelrotation=0)
+
         ax_heat.grid(False)
 
         # -------------------------------------------------

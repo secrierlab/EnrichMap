@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from anndata import AnnData
 from typing import List
@@ -22,6 +23,10 @@ def variogram(
 ) -> None:
     """
     Compute empirical variograms to assess spatial dependence for any score key.
+
+    Semivariance is shown divided by the variance of the score, so scores on different scales share
+    one axis. The dashed line at 1 is the variance: values below it mean that spots at that lag are
+    more alike than spots picked at random.
 
     Parameters
     ----------
@@ -49,24 +54,37 @@ def variogram(
         max_lag = np.percentile(dists, lag_percentile)
 
     n = len(score_key)
-    fig, axes = plt.subplots(1, n, figsize=(4 * n, 4), constrained_layout=True)
+    fig, axes = plt.subplots(
+        1, n, figsize=(2.5 * n, 2.1), sharey=True, constrained_layout=True
+    )
     if n == 1:
         axes = [axes]
 
     variograms = []
     for ax, key in zip(axes, score_key):
         values = adata.obs[key].values
-        V = Variogram(coords, values, method="cressie", model="gaussian", verbose=True)
+        V = Variogram(coords, values, method="cressie", model="gaussian", verbose=False)
         variograms.append(V)
 
-        ax.plot(V.bins, V.experimental, "o-", label="Experimental variogram")
-        ax.axhline(np.var(values), color="r", linestyle="--", label="Variance")
-        ax.set_xlabel("Spatial lag")
-        ax.set_ylabel("Semivariance")
-        ax.set_title(f"{key}")
-        ax.legend()
+        inside = V.bins <= max_lag
+        ax.plot(
+            V.bins[inside],
+            V.experimental[inside] / np.var(values),
+            "o-",
+            ms=2,
+            lw=0.8,
+            color="#2f0bdf",
+        )
+        ax.axhline(1, color="0.5", ls="--", lw=0.5)
+        ax.set_xlabel("Spatial lag", fontsize=7)
+        ax.set_title(f"{key}", fontsize=8)
+        ax.tick_params(labelsize=6)
         ax.grid(False)
         ax.set_xlim(0, max_lag)
+        sns.despine(ax=ax)
+
+    axes[0].set_ylabel("Semivariance / variance", fontsize=7)
+    axes[0].set_ylim(0, None)
 
     if save:
         # Ensure 'figures/' directory exists

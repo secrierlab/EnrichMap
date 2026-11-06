@@ -14,6 +14,7 @@ def build_signed_weights(
     up_genes: list[str],
     down_genes: list[str],
     score_key: str = "enrichmap",
+    batch_key: str | None = None,
 ) -> dict[str, dict[str, float]]:
     """
     Build a signed gene weight dictionary from upregulated and downregulated gene lists.
@@ -37,6 +38,9 @@ def build_signed_weights(
         Downregulated gene symbols.
     score_key : str, default "enrichmap"
         Name for the signature in the returned dictionary.
+    batch_key : str or None, optional
+        Column in `adata.obs` with batch (slide) labels; the CV magnitudes then use within-batch
+        variation, as in ``enrichmap.tl.score(batch_key=...)``.
 
     Returns
     -------
@@ -50,7 +54,7 @@ def build_signed_weights(
     >>> em.tl.score(adata, gene_weights=gw)
     """
     all_genes = list(set(up_genes + down_genes))
-    cv_weights = infer_gene_weights(adata, all_genes)
+    cv_weights = infer_gene_weights(adata, all_genes, batch_key=batch_key)
 
     # Filter to genes present in data
     up_present = [g for g in up_genes if g in cv_weights]

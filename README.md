@@ -11,7 +11,8 @@
 ## Features
 
 - Fast computation of enrichment scores
-- Support for batch correction and spatial covariates
+- Scores standardised against a null model of expression-matched random gene sets, so a positive score means enrichment over random genes at that spot
+- Support for batch correction and optional spatial covariate correction
 - Built-in spatial smoothing
 - Visualisation tools for intuitive mapping
 - Easy integration with AnnData (.h5ad) objects
@@ -21,7 +22,7 @@
 - **Operating system:** developed and tested on macOS 26 (Apple M2 Pro, 16 GB RAM) and Ubuntu 22.04 Server. `EnrichMap` is a pure-Python package with pip-installable dependencies, so it is expected to run on Linux and Windows as well, but these have not been tested.
 - **Python:** ≥ 3.10. Tested with Python 3.11.9 and 3.12.4.
 - **Hardware:** no non-standard hardware is required (no GPU). The demo below peaks at about 1.4 GB of RAM; memory use grows with the size of the dataset.
-- **Dependencies:** installed automatically by `pip`. `EnrichMap` 0.2.4 was tested with the following resolved versions (dependencies are not pinned; versions resolved by `pip` on 7 October 2026):
+- **Dependencies:** installed automatically by `pip`. The resolved versions below were recorded when testing `EnrichMap` 0.2.4 (dependencies are not pinned; versions resolved by `pip` on 7 October 2026). Version 0.3.0 adds no dependencies and was tested with Python 3.11 on Ubuntu 22.04:
 
 | Package | Python 3.11.9 | Python 3.12.4 |
 |---|---|---|
@@ -83,8 +84,10 @@ em.tl.score(
     adata=adata,
     gene_set=gene_set,
     score_key="T_cell_signature",
-    smoothing=True,  # by default,
-    correct_spatial_covariates=True,  # by default
+    smoothing=True,  # by default
+    null_model=True,  # by default: z-score against 100 random gene sets matched on mean and CV
+    compute_q_vals=False,  # by default; True uses 1000 random gene sets and adds per-spot q-values to adata.obs
+    correct_spatial_covariates=False,  # by default; True fits a spatial GAM to each score
     batch_key=None,  # Set batch_key if working with multiple slides
 )
 
@@ -169,18 +172,18 @@ em.pl.spatial_enrichmap(
 5870 spots x 14664 genes; slides: ['0', '3']
 Scoring Hybrid: 12/12 genes found: 100%|██████████| 1/1 [...]
 count    5870.000
-mean       -0.000
-std         0.460
-min        -1.498
-25%        -0.295
-50%        -0.049
-75%         0.236
-max         3.486
+mean       -0.022
+std         1.570
+min        -4.326
+25%        -1.066
+50%        -0.250
+75%         0.762
+max        10.011
 ```
 
-and a two-panel figure is saved (one spatial map per slide, spots coloured by the `Hybrid` enrichment score on a diverging red-blue scale, centred at zero). The scores are stored in `adata.obs["Hybrid_score"]`. Results were identical on Python 3.11.9 and 3.12.4, and with both the PyPI release (0.2.3) and the current GitHub version (0.2.4). Depending on your `squidpy` and `anndata` versions, harmless `FutureWarning` deprecation messages may also be printed.
+and a two-panel figure is saved (one spatial map per slide, spots coloured by the `Hybrid` enrichment score on a diverging red-blue scale, centred at zero). The scores are stored in `adata.obs["Hybrid_score"]`. Since 0.3.0 the default score is a z-score against 100 expression-matched random gene sets (`null_model=True`): 0 means no different from random genes, positive values mean enrichment. Earlier versions (0.2.x) used a spatial GAM by default and gave scores on a different scale for the same call; to reproduce them, pass `null_model=False, correct_spatial_covariates=True`. Depending on your `squidpy` and `anndata` versions, harmless `FutureWarning` deprecation messages may also be printed.
 
-**Expected run time.** About 10 seconds on a normal desktop computer once the dataset is cached (the scoring itself takes under 1 second). The very first run after installation takes longer (about 1 minute in our tests) because of one-off library start-up and compilation costs, plus the 72 MB dataset download.
+**Expected run time.** About 10 seconds on a normal desktop computer once the dataset is cached (the scoring itself, including the null model, takes about 1.5 seconds). The very first run after installation takes longer (about 1 minute in our tests) because of one-off library start-up and compilation costs, plus the 72 MB dataset download.
 
 ## Reproducing the manuscript results
 

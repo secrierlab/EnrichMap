@@ -8,6 +8,7 @@ from scipy.sparse import issparse
 def infer_gene_weights(
     adata: AnnData,
     gene_set: list,
+    batch_key: str | None = None,
 ) -> dict | None:
     """
     Infer gene weights based on the coefficient of variation (CV) of gene expression.
@@ -21,11 +22,18 @@ def infer_gene_weights(
         List of gene names for which weights (CV values) will be inferred.
         Only genes present in `adata.var_names` will be considered.
 
+    batch_key : str or None, optional
+        Column in `adata.obs` with batch (slide) labels. If given, the CV uses the within-batch
+        standard deviation (spread around each batch's own mean) over the overall mean, so that a
+        gene is not up-weighted for differing between batches. One weight per gene is still shared
+        by all batches, which keeps scores comparable across them.
+
     Returns
     -------
     dict
         A dictionary mapping gene names to their inferred weights based on the coefficient of variation.
-        The weight reflects the relative variability of each gene's expression across all cells.
+        The weight reflects the relative variability of each gene's expression across all cells
+        (within batches if `batch_key` is given).
 
     """
     # Ensure genes are in the dataset
@@ -40,7 +48,16 @@ def infer_gene_weights(
     
     # Compute the mean and standard deviation for each gene
     mean_expr = np.mean(expr_matrix, axis=0)
-    std_expr = np.std(expr_matrix, axis=0)
+    if batch_key is None:
+        std_expr = np.std(expr_matrix, axis=0)
+    else:
+        # within-batch SD: deviations from each batch's own mean
+        labels = np.asarray(adata.obs[batch_key])
+        within_ss = np.zeros(expr_matrix.shape[1])
+        for batch in np.unique(labels):
+            x = expr_matrix[labels == batch]
+            within_ss += np.square(x - x.mean(axis=0)).sum(axis=0)
+        std_expr = np.sqrt(within_ss / expr_matrix.shape[0])
     
     # Avoid division by zero and calculate CV (coefficient of variation)
     with np.errstate(divide="ignore", invalid="ignore"):
