@@ -9,3 +9,4 @@ Tutorials
    multiple_samples
    gene_weights
    opposing_programmes
+   single_cell_resolution
