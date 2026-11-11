@@ -23,6 +23,7 @@ _MOCK_MODULES = [
     "squidpy",
     "squidpy.pl",
     "squidpy.pl._spatial_utils",
+    "squidpy.pl._utils",
     "spatialdata",
     "spatialdata._logging",
     # numerics
@@ -38,6 +39,7 @@ _MOCK_MODULES = [
     # plotting
     "matplotlib",
     "matplotlib.cm",
+    "matplotlib.collections",
     "matplotlib.colors",
     "matplotlib.gridspec",
     "matplotlib.patches",
